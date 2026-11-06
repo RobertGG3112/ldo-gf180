@@ -1,0 +1,17 @@
+# Resultados de simulación
+*.raw
+*.log
+# Extracción de Magic / netlists generados
+*.ext
+*.nodes
+*.sim
+*.res.ext
+*.spice.bak
+# Archivos temporales y de respaldo
+*~
+*.swp
+*.bak
+# xschem: netlists generados
+simulation/
+# Python
+__pycache__/
