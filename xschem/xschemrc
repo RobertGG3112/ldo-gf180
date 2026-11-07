@@ -1,0 +1,2 @@
+# Carga la configuración del PDK GF180MCU
+source $env(PDK_ROOT)/$env(PDK)/libs.tech/xschem/xschemrc
