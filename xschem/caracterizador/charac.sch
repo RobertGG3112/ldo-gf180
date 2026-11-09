@@ -102,12 +102,24 @@ C {lab_pin.sym} -190 -1370 1 0 {name=p2 sig_type=std_logic lab=Vdn
 C {lab_pin.sym} 160 -1370 1 0 {name=p3 sig_type=std_logic lab=VSp
 }
 C {code.sym} -230 -1590 0 0 {name=CURVAS_DC
-spice_ignore=false
+spice_ignore=0
 only_toplevel=true
 value="
 
 .control
   save all
+
+* ======================= CONFIGURACIÓN PERSONALIZADA DE COLORES Y ESTILO ========================
+set color0=white \\* Fondo blanco (o 'black' si prefieres fondo oscuro) [1, 2] 
+set color1=black \\* Texto y rejilla negros (si el fondo es blanco) [1, 2] 
+set color2=red \\* 1ª curva
+set color3=blue \\* 2ª curva
+set color4=green \\* 3ª curva
+set color5=magenta \\* 4ª curva
+set color6=cyan \\* 5ª curva
+set color7=orange \\* 6ª curva
+set color8=darkgreen \\* 7ª curva
+set xbrushwidth=2 \\* Hace el trazo de las curvas más grueso y visible [2, 4]
 
   * ===== NMOS =====
   dc V2 0 3.3 0.01 V1 0 3.3 0.55
@@ -145,4 +157,66 @@ only_toplevel=true
 value="
 .include /home/ringosinye/eda/pdks/gf180mcuD/libs.tech/ngspice/design.ngspice
 .lib /home/ringosinye/eda/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice typical
+.param sw\\_stat\\_mismatch = 0
+"}
+C {code.sym} -40 -1590 0 0 {name=METRICAS
+spice_ignore=0
+only_toplevel=true
+value="
+.control
+save all
+
+* Coloracion de graficas
+set color0=white
+set color1=black
+set color2=blue
+set xbrushwidth=2
+
+* ========================================================
+* 1. CARACTERIZACION NMOS (Voltaje fijo VDS = 1.65 V)
+* ========================================================
+alter V2 = 1.65
+dc V1 0 3.3 0.01
+
+let idn = abs(-i(V2)) + 1e-15
+let gmn = deriv(idn)
+let gmidn = gmn/idn
+
+* --- MEDICIONES AUTOMATICAS NMOS ---
+meas dc vth_n find v(vgn) when idn=100n
+meas dc gmn_max max gmn
+meas dc id_inv_mod_n find idn when gmidn=15
+
+* Guardar valores numéricos en variables antes de cambiar de simulación
+set vth_val = $&vth_n
+set gmn_val = $&gmn_max
+set id_mod_val = $&id_inv_mod_n
+
+* ========================================================
+* 2. RESISTENCIA DE SALIDA NMOS (ro) en VGS = 1.65 V
+* ========================================================
+alter V1 = 1.65
+dc V2 0 3.3 0.01
+
+let idn_sat = abs(-i(V2))
+let gds_vec = deriv(idn_sat)
+meas dc gds_n find gds_vec at=1.65
+
+set gds_val = $&gds_n
+let ro_n = 1 / gds_n
+let av_n = $gmn_val * ro_n
+
+set ro_val = $&ro_n
+set av_val = $&av_n
+
+* --- IMPRIMIR RESULTADOS EN CONSOLA ---
+echo ================ RESUMEN NMOS ================
+echo Vth_n = $vth_val V
+echo gmn_max = $gmn_val S
+echo ID_inv_mod_n = $id_mod_val A
+echo gds_n = $gds_val S
+echo ro_n = $ro_val Ohms
+echo Av_n (gm*ro) = $av_val V/V
+echo ==============================================
+.endc
 "}
