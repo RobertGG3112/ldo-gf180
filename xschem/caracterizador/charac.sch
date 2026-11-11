@@ -321,7 +321,7 @@ value="
 .endc
 "}
 C {code.sym} -420 -1420 0 0 {name=Capacitancias
-spice_ignore=0 
+spice_ignore=1
 only_toplevel=true
 
 value="
