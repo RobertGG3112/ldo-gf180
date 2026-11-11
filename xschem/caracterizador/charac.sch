@@ -102,7 +102,7 @@ C {lab_pin.sym} -370 -1240 1 0 {name=p2 sig_type=std_logic lab=Vdn
 C {lab_pin.sym} -40 -1190 1 0 {name=p3 sig_type=std_logic lab=VSp
 }
 C {code.sym} -570 -1580 0 0 {name=Curvas_dc
-spice_ignore=0
+spice_ignore=1
 only_toplevel=true
 value="
 
@@ -160,7 +160,7 @@ value="
 .param sw\\_stat\\_mismatch = 0
 "}
 C {code.sym} -430 -1580 0 0 {name=Metricas_dc
-spice_ignore=0
+spice_ignore=1
 only_toplevel=true
 value="
 .control
@@ -268,7 +268,7 @@ echo ==============================================
 .endc
 "}
 C {code.sym} -560 -1420 0 0 {name=Metricas_ac
-spice_ignore=0
+spice_ignore=1
 only_toplevel=true 
 value="
 .control
