@@ -19,11 +19,7 @@ N 270 -140 270 -120 {
 lab=GND}
 N -140 -10 -140 10 {
 lab=GND}
-N -50 -40 10 -40 {
-lab=GND}
 N 80 10 80 40 {
-lab=GND}
-N -50 -40 -50 -0 {
 lab=GND}
 N 140 -60 210 -60 {
 lab=vout}
@@ -41,14 +37,18 @@ N -20 -80 10 -80 {
 lab=#net3}
 N 10 -150 10 -80 {
 lab=#net3}
+N -50 -40 10 -40 {
+lab=#net4}
+N -50 20 -50 30 {
+lab=GND}
 C {ota_n_in.sym} 120 100 0 0 {name=x1}
 C {res.sym} -50 -80 1 0 {name=R1
-value=1k
+value=100k
 footprint=1206
 device=resistor
 m=1}
 C {res.sym} 80 -150 1 0 {name=R2
-value=1k
+value=100k
 footprint=1206
 device=resistor
 m=1}
@@ -57,7 +57,7 @@ C {vsource.sym} 270 -170 0 0 {name=V2 value=3.3 savecurrent=false}
 C {gnd.sym} 80 40 0 0 {name=l1 lab=GND}
 C {gnd.sym} 270 -120 0 0 {name=l2 lab=GND}
 C {gnd.sym} -140 10 0 0 {name=l3 lab=GND}
-C {gnd.sym} -50 0 0 0 {name=l4 lab=GND}
+C {gnd.sym} -50 30 0 0 {name=l4 lab=GND}
 C {code.sym} -170 -280 0 0 {name=PRUEBA_TRAN 
 spice_ignore=0 
 only_toplevel=true 
@@ -73,10 +73,10 @@ set color3=red
 set xbrushwidth=2
 
 * 1. Convertir V1 a onda senoidal: Offset = 0V, Amplitud = 0.5V, Frecuencia = 1kHz
-alter V1 sin(0 0.5 1k)
+alter V1 sin(1.65 0.5 1k)
 
 * 2. Simular 5 ms con paso de 1 us (5 ciclos de 1 kHz)
-tran 1u 5m
+tran 1u 2m
 
 * 3. Graficar la señal de salida Vout
 plot v(Vout) title 'Respuesta Transitoria Inversor OTA 5T' xlabel 'Tiempo (s)' ylabel 'Voltaje (V)'
@@ -96,3 +96,4 @@ footprint=1206
 device="ceramic capacitor"}
 C {gnd.sym} 210 30 0 0 {name=l5 lab=GND}
 C {lab_wire.sym} 190 -60 0 0 {name=p2 sig_type=std_logic lab=vout}
+C {vsource.sym} -50 -10 0 0 {name=V3 value=1.65 savecurrent=false}
