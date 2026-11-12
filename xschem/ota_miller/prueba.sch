@@ -72,7 +72,7 @@ set color2=blue
 set color3=red
 set xbrushwidth=2
 
-* 1. Convertir V1 a onda senoidal: Offset = 0V, Amplitud = 0.5V, Frecuencia = 1kHz
+* 1. Convertir V1 a onda senoidal: Offset = 1.65V, Amplitud = 0.5V, Frecuencia = 1kHz
 alter V1 sin(1.65 0.5 1k)
 
 * 2. Simular 5 ms con paso de 1 us (5 ciclos de 1 kHz)

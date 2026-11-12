@@ -382,7 +382,7 @@ set xbrushwidth=2
 
 * ========================================================
 * NOTA: el criterio de Vth usa ID = 100n * (W/L).
-* Con W/L = 0.22u/0.28u el umbral es 78.6n. Si cambias W o L,
+* Con W/L = 0.22u/0.28u el umbral es en 78.6n. Si cambias W o L,
 * actualiza ese valor en las dos lineas 'meas ... vth_'.
 * ========================================================
 
@@ -397,16 +397,18 @@ let gmn = deriv(idn)
 let gmidn = gmn/idn
 
 * Para depurar, ver gm/Id contra Id (descomenta la linea):
-* plot gmidn vs idn xlog
+plot gmidn vs idn xlog
 
 * --- MEDICIONES AUTOMATICAS NMOS ---
+
 * Vth por corriente constante
-meas dc vth_n find v(vgn) when idn=250n
+meas dc vth_n find v(vgn) when idn=1u
+
 * Punto de operacion a gm/Id = 15 (inversion moderada).
-* cross=last toma el cruce en que gm/Id BAJA por 15; el primer
-* cruce cae en el piso de fuga (pA) y no sirve.
+* cross=last toma el cruce en que gm/Id BAJA por 15; el primer cruce cae en el piso de fuga (pA) y no sirve.
 meas dc id_mod_n find idn when gmidn=15 cross=last
 meas dc vgs_mod_n find v(vgn) when gmidn=15 cross=last
+
 
 * Guardar valores numericos en variables antes de cambiar de simulacion
 set vth_n_val = $&vth_n
@@ -446,10 +448,13 @@ let vgsp = vgp-vsp
 
 * --- MEDICIONES AUTOMATICAS PMOS ---
 * Vth por corriente constante (sale negativo)
-meas dc vth_p find vgsp when idp=250n
+meas dc vth_p find vgsp when idp=1u
+
+
 * Punto de operacion a gm/Id = 15 (mismo criterio cross=last)
 meas dc id_mod_p find idp when gmidp=15 cross=last
 meas dc vgs_mod_p find vgsp when gmidp=15 cross=last
+
 
 * Guardar valores numericos en variables antes de cambiar de simulacion
 set vth_p_val = $&vth_p
@@ -477,7 +482,7 @@ set av_p_val = $&av_p
 
 * --- IMPRIMIR RESULTADOS EN CONSOLA ---
 echo ================ RESUMEN NMOS (gm/Id = 15) ================
-echo Vth_n (ID=250n) = $vth_n_val V
+echo Vth_n (ID=1u) = $vth_n_val V
 echo Id_mod_n = $id_mod_n_val A
 echo Vgs_mod_n = $vgs_mod_n_val V
 echo gds_n = $gds_n_val S
@@ -486,7 +491,7 @@ echo VA_n = $va_n_val V
 echo Av_n (15*VA) = $av_n_val V/V
 echo ===========================================================
 echo ================ RESUMEN PMOS (gm/Id = 15) ================
-echo Vth_p (ID=250n) = $vth_p_val V
+echo Vth_p (ID=1u) = $vth_p_val V
 echo Id_mod_p = $id_mod_p_val A
 echo Vgs_mod_p = $vgs_mod_p_val V
 echo gds_p = $gds_p_val S
@@ -547,7 +552,7 @@ let gmidn = gmn/idn
 
 * Referencias para los graficos
 let ref15 = 15 + 0*idn
-let ith_n = 7.86e-8 + 0*idn
+let ith_n = 1e-6 + 0*idn
 
 * gm/Id vs ID, con la linea de referencia gm/Id = 15
 plot gmidn ref15 vs idn xlog xlimit 1e-9 1e-3 ylimit 0 35 title 'NMOS gm/Id' xlabel 'ID (A)' ylabel 'gm/ID (1/V)'
@@ -594,7 +599,7 @@ let vgsp = vgp-vsp
 
 * Referencias para los graficos
 let ref15p = 15 + 0*idp
-let ith_p = 7.86e-8 + 0*idp
+let ith_p = 1e-6 + 0*idp
 
 * gm/Id vs |ID|, con la linea de referencia gm/Id = 15
 plot gmidp ref15p vs idp xlog xlimit 1e-9 1e-3 ylimit 0 35 title 'PMOS gm/Id' xlabel '|ID| (A)' ylabel 'gm/ID (1/V)'
@@ -676,7 +681,6 @@ let gm_ac_n = abs(i(V2))
 
 * fT = frecuencia en que H21 cae a 1 (0 dB)
 meas ac fT_n when h21_n=1
-set fT_n_val = $&fT_n
 
 * Cgg a 100 kHz (bien por debajo de fT) y gm a 1 kHz
 meas ac cgg_n_m find cgg_n at=1e5
@@ -684,6 +688,7 @@ meas ac gm_n_m find gm_ac_n at=1e3
 
 set cgg_n_val = $&cgg_n_m
 set gm_n_val = $&gm_n_m
+set fT_n_val = $&fT_n
 
 * Evita AC cruzado en la seccion PMOS
 alter V1 acmag = 0
@@ -717,10 +722,10 @@ let cgg_p = abs(imag(i(V4))) / (2*pi*frequency)
 let gm_ac_p = abs(i(V3))
 
 meas ac fT_p when h21_p=1
-set fT_p_val = $&fT_p
 
 meas ac cgg_p_m find cgg_p at=1e5
 meas ac gm_p_m find gm_ac_p at=1e3
+set fT_p_val = $&fT_p
 
 set cgg_p_val = $&cgg_p_m
 set gm_p_val = $&gm_p_m
@@ -739,7 +744,7 @@ echo ================ RESULTADOS AC ================
 echo ---- NMOS (gm/Id objetivo = $gmid_n_obj) ----
 echo Id = $id_n_val A
 echo Vgs = $vgs_n_val V
-echo fT = $fT_n_val Hz
+print ac1.fT_n 
 echo gm = $gm_n_val S
 echo Cgg = $cgg_n_val F
 echo Chequeo gm/Id (debe dar el objetivo) = $&gmid_chk_n
@@ -747,7 +752,7 @@ echo Chequeo fT = gm/(2pi Cgg) = $&ft_chk_n Hz
 echo ---- PMOS (gm/Id objetivo = $gmid_p_obj) ----
 echo Id = $id_p_val A
 echo Vgs = $vgs_p_val V
-echo fT = $fT_p_val Hz
+print ac2.fT_p
 echo gm = $gm_p_val S
 echo Cgg = $cgg_p_val F
 echo Chequeo gm/Id (debe dar el objetivo) = $&gmid_chk_p
