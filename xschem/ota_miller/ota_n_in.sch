@@ -60,13 +60,13 @@ lab=IDn}
 N -80 -80 -80 -60 {
 lab=IDn}
 C {opin.sym} 340 -110 0 0 {name=p1 lab=Voutn}
-C {ipin.sym} 180 260 3 0 {name=p2 lab=VSSn}
+C {ipin.sym} 180 260 3 0 {name=p2 lab=VSS}
 C {ipin.sym} 180 -300 1 0 {name=p3 lab=VDD}
 C {ipin.sym} 0 -40 0 0 {name=p4 lab=+n}
 C {ipin.sym} 360 -40 2 0 {name=p5 lab=-n}
 C {gf180mcu_fd_pr/nfet3_03v3.sym} 40 -40 0 0 {name=M1
-L=0.28u
-W=0.22u
+L=1u
+W=4.1u
 body=GND
 nf=1
 m=1
@@ -80,8 +80,8 @@ model=nfet_03v3
 spiceprefix=X
 }
 C {gf180mcu_fd_pr/nfet3_03v3.sym} 310 -40 0 1 {name=M2
-L=0.28u
-W=0.22u
+L=1u
+W=4.1u
 body=GND
 nf=1
 m=1
@@ -95,8 +95,8 @@ model=nfet_03v3
 spiceprefix=X
 }
 C {gf180mcu_fd_pr/pfet3_03v3.sym} 80 -190 0 1 {name=M3
-L=0.28u
-W=0.22u
+L=1u
+W=10u
 body=VDD
 nf=1
 m=1
@@ -110,8 +110,8 @@ model=pfet_03v3
 spiceprefix=X
 }
 C {gf180mcu_fd_pr/pfet3_03v3.sym} 270 -190 0 0 {name=M4
-L=0.28u
-W=0.22u
+L=1u
+W=10u
 body=VDD
 nf=1
 m=1
@@ -125,8 +125,8 @@ model=pfet_03v3
 spiceprefix=X
 }
 C {gf180mcu_fd_pr/nfet3_03v3.sym} 160 90 0 0 {name=M5
-L=0.28u
-W=0.22u
+L=1u
+W=5u
 body=GND
 nf=1
 m=1
@@ -140,8 +140,8 @@ model=nfet_03v3
 spiceprefix=X
 }
 C {gf180mcu_fd_pr/nfet3_03v3.sym} -60 90 0 1 {name=M6
-L=0.28u
-W=0.22u
+L=1u
+W=1u
 body=GND
 nf=1
 m=1

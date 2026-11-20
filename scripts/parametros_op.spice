@@ -1,0 +1,228 @@
+.control
+* Guardar nodos, fuentes y parametros internos BSIM4 de ambos transistores
+save all @m.xm1.m0[vth] @m.xm1.m0[vdsat] @m.xm1.m0[gmbs] @m.xm2.m0[vth] @m.xm2.m0[vdsat] @m.xm2.m0[gmbs]
+
+* ========================================================
+* PARAMETROS (lo unico que hay que editar)
+* ========================================================
+* --- NMOS: dimensiones (m) y punto de polarizacion (V) ---
+set wn_val = 21.045e-6
+set ln_val = 1e-6
+set vgs_n = 1.03
+set vds_n = 1.65
+
+* --- PMOS: dimensiones (m) y punto de polarizacion (V, magnitudes) ---
+set wp_val = 10e-6
+set lp_val = 1e-6
+set vsg_p = 0.85
+set vsd_p = 1.0
+
+* Aplica W y L al circuito (usa wn, l_n, wp, lp)
+alterparam wn = $wn_val
+alterparam l_n = $ln_val
+alterparam wp = $wp_val
+alterparam lp = $lp_val
+reset
+
+* ========================================================
+* 1. PUNTO DE OPERACION (NMOS y PMOS)
+* ========================================================
+alter V1 = $vgs_n
+alter V2 = $vds_n
+alter V4 = -$vsg_p
+alter V3 = $vsd_p
+op
+
+let id_n = abs(i(V2))
+let id_p = abs(i(V3))
+set id_n_val = $&id_n
+set id_p_val = $&id_p
+
+* Extraccion directa de parametros internos BSIM4
+let vth_n_x = abs(@m.xm1.m0[vth])
+let vdsat_n_x = abs(@m.xm1.m0[vdsat])
+let gmb_n_x = abs(@m.xm1.m0[gmbs])
+set vth_n_val = $&vth_n_x
+set vdsat_n_val = $&vdsat_n_x
+set gmb_n_val = $&gmb_n_x
+
+let vth_p_x = abs(@m.xm2.m0[vth])
+let vdsat_p_x = abs(@m.xm2.m0[vdsat])
+let gmb_p_x = abs(@m.xm2.m0[gmbs])
+set vth_p_val = $&vth_p_x
+set vdsat_p_val = $&vdsat_p_x
+set gmb_p_val = $&gmb_p_x
+
+* ========================================================
+* 2. NMOS: pequena senal AC (gm, gds a 1 kHz; Cgg, Cgd a 1 MHz)
+* ========================================================
+alter V1 acmag = 1
+alter V2 acmag = 0
+ac dec 1 1e3 1e6
+let gm_ac_n = abs(i(V2))
+let cgg_ac_n = abs(imag(i(V1))) / (2*pi*frequency)
+let gm_x = gm_ac_n[0]
+let cgg_x = cgg_ac_n[3]
+set gm_n_val = $&gm_x
+set cgg_n_val = $&cgg_x
+
+alter V1 acmag = 0
+alter V2 acmag = 1
+ac dec 1 1e3 1e6
+let gds_ac_n = abs(i(V2))
+let cgd_ac_n = abs(imag(i(V1))) / (2*pi*frequency)
+let gds_x = gds_ac_n[0]
+let cgd_x = cgd_ac_n[3]
+set gds_n_val = $&gds_x
+set cgd_n_val = $&cgd_x
+alter V2 acmag = 0
+
+* Calculos derivados NMOS convertidos a variables globales (set)
+let vov_n = $vgs_n - $vth_n_val
+set vov_n_val = $&vov_n
+
+let vdsmvdsat_n = $vds_n - $vdsat_n_val
+set vdsmvdsat_n_val = $&vdsmvdsat_n
+
+let ro_n = 1 / $gds_n_val
+set ro_n_val = $&ro_n
+
+let gmro_n = $gm_n_val / $gds_n_val
+set gmro_n_val = $&gmro_n
+
+let cgs_n = $cgg_n_val - $cgd_n_val
+set cgs_n_val = $&cgs_n
+
+let gmoid_n = $gm_n_val / $id_n_val
+set gmoid_n_val = $&gmoid_n
+
+let ft_n = $gm_n_val / (2*pi*$cgg_n_val)
+set ft_n_val = $&ft_n
+
+let ftgmid_n = ft_n * gmoid_n
+set ftgmid_n_val = $&ftgmid_n
+
+let gft_n = ft_n * gmro_n
+set gft_n_val = $&gft_n
+
+set region_n = 2
+if $vgs_n < $vth_n_val
+  set region_n = 3
+else
+  if $vds_n < $vdsat_n_val
+    set region_n = 1
+  end
+end
+
+* ========================================================
+* 3. PMOS: pequena senal AC (gm, gds a 1 kHz; Cgg, Cgd a 1 MHz)
+* ========================================================
+alter V4 acmag = 1
+alter V3 acmag = 0
+ac dec 1 1e3 1e6
+let gm_ac_p = abs(i(V3))
+let cgg_ac_p = abs(imag(i(V4))) / (2*pi*frequency)
+let gm_y = gm_ac_p[0]
+let cgg_y = cgg_ac_p[3]
+set gm_p_val = $&gm_y
+set cgg_p_val = $&cgg_y
+
+alter V4 acmag = 0
+alter V3 acmag = 1
+ac dec 1 1e3 1e6
+let gds_ac_p = abs(i(V3))
+let cgd_ac_p = abs(imag(i(V4))) / (2*pi*frequency)
+let gds_y = gds_ac_p[0]
+let cgd_y = cgd_ac_p[3]
+set gds_p_val = $&gds_y
+set cgd_p_val = $&cgd_y
+alter V3 acmag = 0
+
+* Calculos derivados PMOS convertidos a variables globales (set)
+let vov_p = $vsg_p - $vth_p_val
+set vov_p_val = $&vov_p
+
+let vdsmvdsat_p = $vsd_p - $vdsat_p_val
+set vdsmvdsat_p_val = $&vdsmvdsat_p
+
+let ro_p = 1 / $gds_p_val
+set ro_p_val = $&ro_p
+
+let gmro_p = $gm_p_val / $gds_p_val
+set gmro_p_val = $&gmro_p
+
+let cgs_p = $cgg_p_val - $cgd_p_val
+set cgs_p_val = $&cgs_p
+
+let gmoid_p = $gm_p_val / $id_p_val
+set gmoid_p_val = $&gmoid_p
+
+let ft_p = $gm_p_val / (2*pi*$cgg_p_val)
+set ft_p_val = $&ft_p
+
+let ftgmid_p = ft_p * gmoid_p
+set ftgmid_p_val = $&ftgmid_p
+
+let gft_p = ft_p * gmro_p
+set gft_p_val = $&gft_p
+
+set region_p = 2
+if $vsg_p < $vth_p_val
+  set region_p = 3
+else
+  if $vsd_p < $vdsat_p_val
+    set region_p = 1
+  end
+end
+
+* ========================================================
+* 4. IMPRESION DE TABLAS (ORDEN EXACTO CADENCE ADE)
+* ========================================================
+echo ==========================================================
+echo  NMOS (XM1) : W = $wn_val m | L = $ln_val m
+echo ==========================================================
+echo  ID          = $id_n_val A
+echo  VGS         = $vgs_n V
+echo  VDS         = $vds_n V
+echo  VSB         = 0 V
+echo  VTH         = $vth_n_val V
+echo  Vov         = $vov_n_val V
+echo  Vdsat       = $vdsat_n_val V
+echo  VDS-Vdsat   = $vdsmvdsat_n_val V
+echo  Region      = $region_n (1:triodo, 2:sat, 3:subumbral)
+echo  gm          = $gm_n_val S
+echo  ro          = $ro_n_val Ohm
+echo  gmb         = $gmb_n_val S
+echo  gmro        = $gmro_n_val V/V
+echo  Cgs         = $cgs_n_val F
+echo  Cgd         = $cgd_n_val F
+echo  gmoid       = $gmoid_n_val 1/V
+echo  fT          = $ft_n_val Hz
+echo  FTGMID      = $ftgmid_n_val Hz/V
+echo  GFT         = $gft_n_val Hz
+echo ==========================================================
+echo ""
+echo ==========================================================
+echo  PMOS (XM2) : W = $wp_val m | L = $lp_val m  (magnitudes)
+echo ==========================================================
+echo  ID          = $id_p_val A
+echo  VSG         = $vsg_p V
+echo  VSD         = $vsd_p V
+echo  VSB         = 0 V
+echo  VTH         = $vth_p_val V
+echo  Vov         = $vov_p_val V
+echo  Vdsat       = $vdsat_p_val V
+echo  VSD-Vdsat   = $vdsmvdsat_p_val V
+echo  Region      = $region_p (1:triodo, 2:sat, 3:subumbral)
+echo  gm          = $gm_p_val S
+echo  ro          = $ro_p_val Ohm
+echo  gmb         = $gmb_p_val S
+echo  gmro        = $gmro_p_val V/V
+echo  Cgs         = $cgs_p_val F
+echo  Cgd         = $cgd_p_val F
+echo  gmoid       = $gmoid_p_val 1/V
+echo  fT          = $ft_p_val Hz
+echo  FTGMID      = $ftgmid_p_val Hz/V
+echo  GFT         = $gft_p_val Hz
+echo ==========================================================
+.endc

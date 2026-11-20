@@ -59,8 +59,8 @@ lab=VSp}
 N -120 -1240 -120 -1190 {
 lab=VSp}
 C {gf180mcu_fd_pr/nfet3_03v3.sym} -390 -1200 0 0 {name=M1
-L=1u
-W=10u
+L=\{l_n\}
+W=\{wn\}
 body=GND
 nf=1
 m=1
@@ -74,8 +74,8 @@ model=nfet_03v3
 spiceprefix=X
 }
 C {gf180mcu_fd_pr/pfet_03v3.sym} -140 -1150 0 0 {name=M2
-L=1u
-W=10u
+L=\{lp\}
+W=\{wp\}
 nf=1
 m=1
 ad="'int((nf+1)/2) * W/nf * 0.18u'"
@@ -101,662 +101,950 @@ C {lab_pin.sym} -370 -1240 1 0 {name=p2 sig_type=std_logic lab=Vdn
 }
 C {lab_pin.sym} -40 -1190 1 0 {name=p3 sig_type=std_logic lab=VSp
 }
-C {code.sym} -570 -1580 0 0 {name=Curvas_dc
-spice_ignore=1
-only_toplevel=true
-value="
-
-.control
-  save all
-
-* ======================= CONFIGURACIÓN PERSONALIZADA DE COLORES Y ESTILO ========================
-set color0=white \\* Fondo blanco (o 'black' si prefieres fondo oscuro) [1, 2] 
-set color1=black \\* Texto y rejilla negros (si el fondo es blanco) [1, 2] 
-set color2=red \\* 1ª curva
-set color3=blue \\* 2ª curva
-set color4=green \\* 3ª curva
-set color5=magenta \\* 4ª curva
-set color6=cyan \\* 5ª curva
-set color7=orange \\* 6ª curva
-set color8=darkgreen \\* 7ª curva
-set xbrushwidth=2 \\* Hace el trazo de las curvas más grueso y visible [2, 4]
-
-  * ===== NMOS =====
-  dc V2 0 3.3 0.01 V1 0 3.3 0.55
-  plot -i(V2) title 'NMOS Output' xlabel 'VDS' ylabel 'ID'
-
-  dc V1 0 3.3 0.01 V2 0.55 3.3 0.55
-  plot -i(V2) title 'NMOS Transfer' xlabel 'VGS' ylabel 'ID'
-
-  alter V2 = 1.65
-  dc V1 0 3.3 0.01
-  let idn = -i(V2)
-  let gmn = deriv(idn)
-  let gmidn = gmn/idn
-  plot gmidn vs idn xlog xlimit 1e-9 1e-3 ylimit 0 35 title 'NMOS gm/Id' xlabel 'ID' ylabel 'gm/ID (1/V)'
-
-  * ===== PMOS (V3 = VSD, V4 = VGS negativo, referido a la fuente) =====
-  dc V3 0 3.3 0.01 V4 0 -3.3 -0.55
-  plot -i(V3) title 'PMOS Output' xlabel 'VSD' ylabel '|ID|'
-
-  dc V4 0 -3.3 -0.01 V3 0.55 3.3 0.55
-  plot -i(V3) title 'PMOS Transfer' xlabel 'VGS' ylabel '|ID|'
-
-  alter V3 = 1.65
-  dc V4 0 -3.3 -0.01
-  let idp = -i(V3)
-  let gmp = abs(deriv(idp))
-  let gmidp = gmp/idp
-  plot gmidp vs idp xlog xlimit 1e-9 1e-3 ylimit 0 35 title 'PMOS gm/Id' xlabel '|ID| (A)' ylabel 'gm/ID (1/V)'
-.endc
-"}
 C {vsource.sym} -220 -1210 2 0 {name=V4 value=1.8 savecurrent=false}
 C {lab_pin.sym} -190 -1150 1 0 {name=p4 sig_type=std_logic lab=Vgp}
-C {code.sym} -700 -1580 0 0 {name=Modelos
+C {code.sym} -650 -1440 0 0 {name=Modelos
 only_toplevel=true
 value="
 .include /home/ringosinye/eda/pdks/gf180mcuD/libs.tech/ngspice/design.ngspice
 .lib /home/ringosinye/eda/pdks/gf180mcuD/libs.tech/ngspice/sm141064.ngspice typical
-.param sw\\_stat\\_mismatch = 0
+.param sw_stat_mismatch = 0
+.param wn=1u l_n=1u wp=1u lp=1u
 "}
-C {code.sym} -430 -1580 0 0 {name=Metricas_dc
+C {code.sym} -520 -1440 0 0 {name=Parametros_OG
 spice_ignore=1
 only_toplevel=true
 value="
 .control
+
+* ========================================================
+* 1. PARAMETROS EDITABLES
+* ========================================================
+* --- NMOS: dimensiones (m) y punto de polarizacion (V) ---
+set wn_val = 4.1e-6
+set ln_val = 1e-6
+set vgs_n = 1.1
+set vds_n = 1.65
+
+* --- PMOS: dimensiones (m) y punto de polarizacion (V, magnitudes) ---
+set wp_val = 1e-6
+set lp_val = 1e-6
+set vsg_p = 1.35
+set vsd_p = 1.65
+
+* Aplicar W y L al circuito
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
+
+* Guardar nodos, fuentes y TODOS los parametros internos BSIM4 necesarios
+save all 
+
+* Guardar parámetros internos del NMOS (XM1) 
+save @m.xm1.m0[id] 
+save @m.xm1.m0[vth] 
+save @m.xm1.m0[vdsat] 
+save @m.xm1.m0[gm] 
+save @m.xm1.m0[gds] 
+save @m.xm1.m0[gmbs] 
+save @m.xm1.m0[cgg] 
+save @m.xm1.m0[cgs] 
+save @m.xm1.m0[cgd] 
+
+*Guardar parámetros internos del PMOS (XM2) 
+save @m.xm2.m0[id] 
+save @m.xm2.m0[vth] 
+save @m.xm2.m0[vdsat] 
+save @m.xm2.m0[gm] 
+save @m.xm2.m0[gds] 
+save @m.xm2.m0[gmbs] 
+save @m.xm2.m0[cgg] 
+save @m.xm2.m0[cgs] 
+save @m.xm2.m0[cgd]
+
+* ========================================================
+* 2. UNICO PUNTO DE OPERACION (NMOS y PMOS)
+* ========================================================
+set vgs_p_neg = -$vsg_p
+alter v1 $vgs_n
+alter v2 $vds_n
+alter v4 $vgs_p_neg
+alter v3 $vsd_p
+op
+
+* ========================================================
+* 3. EXTRACCION DIRECTA BSIM4 Y CALCULOS DERIVADOS (NMOS)
+* ========================================================
+let id_n_x    = abs(@m.xm1.m0[id])
+let vth_n_x   = abs(@m.xm1.m0[vth])
+let vdsat_n_x = abs(@m.xm1.m0[vdsat])
+let gm_n_x    = abs(@m.xm1.m0[gm])
+let gds_n_x   = abs(@m.xm1.m0[gds])
+let gmb_n_x   = abs(@m.xm1.m0[gmbs])
+let cgg_n_x   = abs(@m.xm1.m0[cgg])
+let cgs_n_x   = abs(@m.xm1.m0[cgs])
+let cgd_n_x   = abs(@m.xm1.m0[cgd])
+
+set id_n_val    = "$&id_n_x"
+set vth_n_val   = "$&vth_n_x"
+set vdsat_n_val = "$&vdsat_n_x"
+set gm_n_val    = "$&gm_n_x"
+set gds_n_val   = "$&gds_n_x"
+set gmb_n_val   = "$&gmb_n_x"
+set cgg_n_val   = "$&cgg_n_x"
+set cgs_n_val   = "$&cgs_n_x"
+set cgd_n_val   = "$&cgd_n_x"
+
+* Calculos derivados NMOS
+let vov_n       = $vgs_n - $vth_n_val
+let vdsmvdsat_n = $vds_n - $vdsat_n_val
+let ro_n        = 1 / $gds_n_val
+let gmro_n      = $gm_n_val / $gds_n_val
+let gmoid_n     = $gm_n_val / $id_n_val
+let ft_n        = $gm_n_val / (2*pi*$cgg_n_val)
+let ftgmid_n    = ft_n * gmoid_n
+let gft_n       = ft_n * gmro_n
+
+set vov_n_val       = "$&vov_n"
+set vdsmvdsat_n_val = "$&vdsmvdsat_n"
+set ro_n_val        = "$&ro_n"
+set gmro_n_val      = "$&gmro_n"
+set gmoid_n_val     = "$&gmoid_n"
+set ft_n_val        = "$&ft_n"
+set ftgmid_n_val    = "$&ftgmid_n"
+set gft_n_val       = "$&gft_n"
+
+set region_n = 2
+if $vgs_n < $vth_n_val
+  set region_n = 3
+else
+  if $vds_n < $vdsat_n_val
+    set region_n = 1
+  end
+end
+
+* ========================================================
+* 4. EXTRACCION DIRECTA BSIM4 Y CALCULOS DERIVADOS (PMOS)
+* ========================================================
+let id_p_x    = abs(@m.xm2.m0[id])
+let vth_p_x   = abs(@m.xm2.m0[vth])
+let vdsat_p_x = abs(@m.xm2.m0[vdsat])
+let gm_p_x    = abs(@m.xm2.m0[gm])
+let gds_p_x   = abs(@m.xm2.m0[gds])
+let gmb_p_x   = abs(@m.xm2.m0[gmbs])
+let cgg_p_x   = abs(@m.xm2.m0[cgg])
+let cgs_p_x   = abs(@m.xm2.m0[cgs])
+let cgd_p_x   = abs(@m.xm2.m0[cgd])
+
+set id_p_val    = "$&id_p_x"
+set vth_p_val   = "$&vth_p_x"
+set vdsat_p_val = "$&vdsat_p_x"
+set gm_p_val    = "$&gm_p_x"
+set gds_p_val   = "$&gds_p_x"
+set gmb_p_val   = "$&gmb_p_x"
+set cgg_p_val   = "$&cgg_p_x"
+set cgs_p_val   = "$&cgs_p_x"
+set cgd_p_val   = "$&cgd_p_x"
+
+* Calculos derivados PMOS
+let vov_p       = $vsg_p - $vth_p_val
+let vdsmvdsat_p = $vsd_p - $vdsat_p_val
+let ro_p        = 1 / $gds_p_val
+let gmro_p      = $gm_p_val / $gds_p_val
+let gmoid_p     = $gm_p_val / $id_p_val
+let ft_p        = $gm_p_val / (2*pi*$cgg_p_val)
+let ftgmid_p    = ft_p * gmoid_p
+let gft_p       = ft_p * gmro_p
+
+set vov_p_val       = "$&vov_p"
+set vdsmvdsat_p_val = "$&vdsmvdsat_p"
+set ro_p_val        = "$&ro_p"
+set gmro_p_val      = "$&gmro_p"
+set gmoid_p_val     = "$&gmoid_p"
+set ft_p_val        = "$&ft_p"
+set ftgmid_p_val    = "$&ftgmid_p"
+set gft_p_val       = "$&gft_p"
+
+set region_p = 2
+if $vsg_p < $vth_p_val
+  set region_p = 3
+else
+  if $vsd_p < $vdsat_p_val
+    set region_p = 1
+  end
+end
+
+* ========================================================
+* 5. IMPRESION DE TABLAS (ORDEN EXACTO CADENCE ADE)
+* ========================================================
+echo ==========================================================
+echo  NMOS (XM1) : W = $wn_val m | L = $ln_val m
+echo ==========================================================
+echo  ID          = $id_n_val A
+echo  VGS         = $vgs_n V
+echo  VDS         = $vds_n V
+echo  VSB         = 0 V
+echo  VTH         = $vth_n_val V
+echo  Vov         = $vov_n_val V
+echo  Vdsat       = $vdsat_n_val V
+echo  VDS-Vdsat   = $vdsmvdsat_n_val V
+echo  Region      = $region_n (1:triodo, 2:sat, 3:subumbral)
+echo  gm          = $gm_n_val S
+echo  ro          = $ro_n_val Ohm
+echo  gmb         = $gmb_n_val S
+echo  gmro        = $gmro_n_val V/V
+echo  Cgs         = $cgs_n_val F
+echo  Cgd         = $cgd_n_val F
+echo  gmoid       = $gmoid_n_val 1/V
+echo  fT          = $ft_n_val Hz
+echo  FTGMID      = $ftgmid_n_val Hz/V
+echo  GFT         = $gft_n_val Hz
+echo ==========================================================
+echo ""
+echo ==========================================================
+echo  PMOS (XM2) : W = $wp_val m | L = $lp_val m  (magnitudes)
+echo ==========================================================
+echo  ID          = $id_p_val A
+echo  VSG         = $vsg_p V
+echo  VSD         = $vsd_p V
+echo  VSB         = 0 V
+echo  VTH         = $vth_p_val V
+echo  Vov         = $vov_p_val V
+echo  Vdsat       = $vdsat_p_val V
+echo  VSD-Vdsat   = $vdsmvdsat_p_val V
+echo  Region      = $region_p (1:triodo, 2:sat, 3:subumbral)
+echo  gm          = $gm_p_val S
+echo  ro          = $ro_p_val Ohm
+echo  gmb         = $gmb_p_val S
+echo  gmro        = $gmro_p_val V/V
+echo  Cgs         = $cgs_p_val F
+echo  Cgd         = $cgd_p_val F
+echo  gmoid       = $gmoid_p_val 1/V
+echo  fT          = $ft_p_val Hz
+echo  FTGMID      = $ftgmid_p_val Hz/V
+echo  GFT         = $gft_p_val Hz
+echo ==========================================================
+.endc
+"}
+C {code.sym} -340 -1440 0 0 {name=Curva_gmID_VGS
+only_toplevel=true
+spice_ignore=1
+value="
+.control
+
+* ==================================================================
+* 1. PARAMETROS EDITABLES
+* ==================================================================
+* --- NMOS: dimensiones (m), VDS fijo (V) y punto objetivo gm/ID ---
+set wn_val     = 69.45e-6
+set ln_val     = 1e-6
+set vds_fijo_n = 1.65
+set gmid_obj_n = 22
+
+* --- PMOS: dimensiones (m), VSD fijo (V) y punto objetivo gm/ID ---
+set wp_val     = 10e-6
+set lp_val     = 1e-6
+set vsd_fijo_p = 1.65
+set gmid_obj_p = 5
+
+* Aplicar geometria al esquematico
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
+
+* Guardar nodos y parametros internos BSIM4 necesarios para el barrido
 save all
 
-* Coloracion de graficas
-set color0=white
-set color1=black
-set color2=blue
-set xbrushwidth=2
-
-* ========================================================
-* 1. CARACTERIZACION NMOS (Voltaje fijo VDS = 1.65 V)
-* ========================================================
-alter V2 = 1.65
-dc V1 0 3.3 0.01
-
-let idn = abs(-i(V2)) + 1e-15
-let gmn = deriv(idn)
-let gmidn = gmn/idn
-
-* --- MEDICIONES AUTOMATICAS NMOS ---
-meas dc vth_n find v(vgn) when idn=100n
-meas dc gmn_max max gmn
-meas dc id_inv_mod_n find idn when gmidn=15 cross=last
-
-* Guardar valores numéricos en variables antes de cambiar de simulación
-set vth_n_val = $&vth_n
-set gmn_val = $&gmn_max
-set id_mod_n_val = $&id_inv_mod_n
-
-* ========================================================
-* 2. RESISTENCIA DE SALIDA NMOS (ro) en VGS = 1.65 V
-* ========================================================
-alter V1 = 1.65
-dc V2 0 3.3 0.01
-
-let idn_sat = abs(-i(V2))
-let gds_n_vec = deriv(idn_sat)
-meas dc gds_n find gds_n_vec at=1.65
-
-set gds_n_val = $&gds_n
-let ro_n = 1 / gds_n
-let av_n = $gmn_val * ro_n
-
-set ro_n_val = $&ro_n
-set av_n_val = $&av_n
-
-* ========================================================
-* 1. CARACTERIZACION PMOS (Voltaje fijo VSD = 1.65 V)
-* ========================================================
-alter V3 = 1.65
-dc V4 0 -3.3 -0.01
-
-let idp = abs(i(V3)) + 1e-15
-let gmp = abs(deriv(idp))
-let gmidp = gmp/idp
-let vgsp = vgp-vsp
-
-* --- MEDICIONES AUTOMATICAS PMOS ---
-meas dc vth_p find vgsp when idp=100n
-meas dc gmp_max max gmp
-meas dc id_inv_mod_p find idp when gmidp=15 cross=last
-
-* Guardar valores numéricos en variables antes de cambiar de simulación
-set vth_p_val = $&vth_p
-set gmp_val = $&gmp_max
-set id_mod_p_val = $&id_inv_mod_p
-
-* ========================================================
-* 2. RESISTENCIA DE SALIDA NMOS (ro) en VSG= 1.65 V
-* ========================================================
-alter V4 = -1.65
-dc V3 0 3.3 0.01
-
-let idp_sat = abs(i(V3))
-let gds_p_vec = deriv(idp_sat)
-meas dc gds_p find gds_p_vec at=1.65
-
-set gds_p_val = $&gds_p
-let ro_p = 1 / gds_p
-let av_p = $gmp_val * ro_p
-
-set ro_p_val = $&ro_p
-set av_p_val = $&av_p
-
-
-* --- IMPRIMIR RESULTADOS EN CONSOLA ---
-echo ================ RESUMEN NMOS ================
-echo Vth_n = $vth_n_val V
-echo gmn_max = $gmn_val S
-echo ID_inv_mod_n = $id_mod_n_val A
-echo gds_n = $gds_n_val S
-echo ro_n = $ro_n_val Ohms
-echo Av_n (gmn*ron) = $av_n_val V/V
-echo ==============================================
-echo ================ RESUMEN PMOS ================
-echo Vth_p = $vth_p_val V
-echo gmp_max = $gmp_val S
-echo ID_inv_mod_p = $id_mod_p_val A
-echo gds_p = $gds_p_val S
-echo ro_p = $ro_p_val Ohms
-echo Av_p (gmp*rop) = $av_p_val V/V
-echo ==============================================
-.endc
-"}
-C {code.sym} -560 -1420 0 0 {name=Metricas_ac
-spice_ignore=1
-only_toplevel=true 
-value="
-.control
-    save all
-
-    * Coloracion de graficas
-    set color0=white
-    set color1=black
-    set color2=blue
-    set color3=red
-    set xbrushwidth=2
-
-    * ========================================================
-    * 1. MEDIDA DE fT PARA NMOS (VDS = 1.65V, VGS = 1.65V)
-    * ========================================================
-    alter V2 = 1.65
-    alter V1 = 1.65
-    alter V1 acmag = 1
-
-    * Analisis AC de 1 kHz a 100 GHz (20 puntos por decada)
-    ac dec 20 1k 100G
-
-    * Ganancia de corriente H21 = i(V2) / i(V1)
-    let h21_n = abs(i(V2) / i(V1))
-
-    * Medir la frecuencia cuando H21 cae a 1 (0 dB)
-    meas ac fT_n when h21_n=1
-
-
-    * ========================================================
-    * 2. MEDIDA DE fT PARA PMOS (VSD = 1.65V, VGS = -1.65V)
-    * ========================================================
-    alter V3 = 1.65
-    alter V4 = -1.65
-    alter V4 acmag = 1
-
-    ac dec 20 1k 100G
-    let h21_p = abs(i(V3) / i(V4))
-    meas ac fT_p when h21_p=1
-
-
-* Graficar ganancia de corriente en dB vs Frecuencia
-    plot db(ac1.h21_n) db(ac2.h21_p) xlog title 'Ganancia de Corriente H21 (fT)' xlabel 'Frecuencia (Hz)' ylabel 'H21 (dB)'
-
-    * --- IMPRIMIR RESULTADOS EN CONSOLA ---
-    echo ================ RESULTADOS AC (fT) ================
-    print ac1.fT_n ac2.fT_p
-    echo ====================================================
-
-.endc
-"}
-C {code.sym} -420 -1420 0 0 {name=Capacitancias
-spice_ignore=1
-only_toplevel=true
-
-value="
-.control
-  save all 
-
-  * Coloración de gráficas
-  set color0 = white
-  set color1 = black
-  set color2 = blue
-  set color3 = red
-  set xbrushwidth = 2
-
-  * ========================================================
-  * 1. CAPACITANCIA DE COMPUERTA NMOS (VDS = 1.65V, VGS = 1.65V)
-  * ========================================================
-  alter V2 = 1.65
-  alter V1 = 1.65
-  alter V1 acmag = 1
-
-  * Barrido AC de 1 kHz a 100 MHz (1 MHz queda holgadamente dentro)
-  ac dec 10 1k 100M
-  let cgg_n = imag(-i(V1)) / (2 * pi * frequency)
-  meas ac cgg_n_val find cgg_n at = 1meg
-
-  * ========================================================
-  * 2. CAPACITANCIA DE COMPUERTA PMOS (VSD = 1.65V, VGS = -1.65V)
-  * ========================================================
-  alter V3 = 1.65
-  alter V4 = -1.65
-  alter V4 acmag = 1
-
-  ac dec 10 1k 100M
-  let cgg_p = imag(-i(V4)) / (2 * pi * frequency)
-  meas ac cgg_p_val find cgg_p at = 1meg
-
-* --- GRAFICAR CAPACITANCIAS VS FRECUENCIA ---
-plot ac1.cgg_n ac2.cgg_p xlog title 'Capacitancia de Compuerta Cgg vs Frecuencia' xlabel 'Frecuencia (Hz)' ylabel 'Cgg (F)'
-
-  * --- IMPRIMIR CAPACITANCIAS ---
-  echo ================ CAPACITANCIAS DE COMPUERTA (Cgg @ 1MHz) ================
-  print ac1.cgg_n_val ac2.cgg_p_val
-  echo =========================================================================
-.endc
-"}
-C {code.sym} -210 -1580 0 0 {name=Metricas_dc1
-spice_ignore=1
-only_toplevel=true
-value="
-.control
-save all
-
-* Coloracion de graficas
-set color0=white
-set color1=black
-set color2=blue
-set xbrushwidth=2
-
-* ========================================================
-* NOTA: el criterio de Vth usa ID = 100n * (W/L).
-* Con W/L = 0.22u/0.28u el umbral es en 78.6n. Si cambias W o L,
-* actualiza ese valor en las dos lineas 'meas ... vth_'.
-* ========================================================
-
-* ========================================================
-* 1. CARACTERIZACION NMOS (VDS fijo = 1.65 V, barrido de VGS)
-* ========================================================
-alter V2 = 1.65
-dc V1 0 3.3 0.01
-
-let idn = abs(-i(V2)) + 1e-15
-let gmn = deriv(idn)
-let gmidn = gmn/idn
-
-* Para depurar, ver gm/Id contra Id (descomenta la linea):
-plot gmidn vs idn xlog
-
-* --- MEDICIONES AUTOMATICAS NMOS ---
-
-* Vth por corriente constante
-meas dc vth_n find v(vgn) when idn=1u
-
-* Punto de operacion a gm/Id = 15 (inversion moderada).
-* cross=last toma el cruce en que gm/Id BAJA por 15; el primer cruce cae en el piso de fuga (pA) y no sirve.
-meas dc id_mod_n find idn when gmidn=15 cross=last
-meas dc vgs_mod_n find v(vgn) when gmidn=15 cross=last
-
-
-* Guardar valores numericos en variables antes de cambiar de simulacion
-set vth_n_val = $&vth_n
-set id_mod_n_val = $&id_mod_n
-set vgs_mod_n_val = $&vgs_mod_n
-
-* ========================================================
-* 2. RESISTENCIA DE SALIDA NMOS en el MISMO VGS (barrido de VDS)
-* ========================================================
-alter V1 = $vgs_mod_n_val
-dc V2 0 3.3 0.01
-
-let idn_sat = abs(-i(V2))
-let gds_n_vec = deriv(idn_sat)
-meas dc gds_n find gds_n_vec at=1.65
-
-* VA = Id/gds (tension de Early); ganancia intrinseca = (gm/Id) * VA
-let ro_n = 1 / gds_n
-let va_n = $id_mod_n_val / gds_n
-let av_n = 15 * va_n
-
-set gds_n_val = $&gds_n
-set ro_n_val = $&ro_n
-set va_n_val = $&va_n
-set av_n_val = $&av_n
-
-* ========================================================
-* 3. CARACTERIZACION PMOS (VSD fijo = 1.65 V, barrido de VSG)
-* ========================================================
-alter V3 = 1.65
-dc V4 0 -3.3 -0.01
-
-let idp = abs(i(V3)) + 1e-15
-let gmp = abs(deriv(idp))
-let gmidp = gmp/idp
-let vgsp = vgp-vsp
-
-* --- MEDICIONES AUTOMATICAS PMOS ---
-* Vth por corriente constante (sale negativo)
-meas dc vth_p find vgsp when idp=1u
-
-
-* Punto de operacion a gm/Id = 15 (mismo criterio cross=last)
-meas dc id_mod_p find idp when gmidp=15 cross=last
-meas dc vgs_mod_p find vgsp when gmidp=15 cross=last
-
-
-* Guardar valores numericos en variables antes de cambiar de simulacion
-set vth_p_val = $&vth_p
-set id_mod_p_val = $&id_mod_p
-set vgs_mod_p_val = $&vgs_mod_p
-
-* ========================================================
-* 4. RESISTENCIA DE SALIDA PMOS en el MISMO VGS (barrido de VSD)
-* ========================================================
-alter V4 = $vgs_mod_p_val
-dc V3 0 3.3 0.01
-
-let idp_sat = abs(i(V3))
-let gds_p_vec = deriv(idp_sat)
-meas dc gds_p find gds_p_vec at=1.65
-
-let ro_p = 1 / gds_p
-let va_p = $id_mod_p_val / gds_p
-let av_p = 15 * va_p
-
-set gds_p_val = $&gds_p
-set ro_p_val = $&ro_p
-set va_p_val = $&va_p
-set av_p_val = $&av_p
-
-* --- IMPRIMIR RESULTADOS EN CONSOLA ---
-echo ================ RESUMEN NMOS (gm/Id = 15) ================
-echo Vth_n (ID=1u) = $vth_n_val V
-echo Id_mod_n = $id_mod_n_val A
-echo Vgs_mod_n = $vgs_mod_n_val V
-echo gds_n = $gds_n_val S
-echo ro_n = $ro_n_val Ohms
-echo VA_n = $va_n_val V
-echo Av_n (15*VA) = $av_n_val V/V
-echo ===========================================================
-echo ================ RESUMEN PMOS (gm/Id = 15) ================
-echo Vth_p (ID=1u) = $vth_p_val V
-echo Id_mod_p = $id_mod_p_val A
-echo Vgs_mod_p = $vgs_mod_p_val V
-echo gds_p = $gds_p_val S
-echo ro_p = $ro_p_val Ohms
-echo VA_p = $va_p_val V
-echo Av_p (15*VA) = $av_p_val V/V
-echo ===========================================================
-.endc
-"}
-C {code.sym} -210 -1420 0 0 {name=Curvas_dc1
-spice_ignore=1
-only_toplevel=true
-value="
-.control
-save all
-
-* ======================= COLORES Y ESTILO =======================
-* color0 = fondo, color1 = texto y rejilla, color2 en adelante = curvas
-set color0=white
-set color1=black
-set color2=red
-set color3=blue
-set color4=green
-set color5=magenta
-set color6=cyan
-set color7=orange
-set color8=darkgreen
-set xbrushwidth=2
-
-* ========================================================
-* NOTA: igual que en Metricas_dc, el umbral de Vth es
-* ID = 100n * (W/L). Con W/L = 0.22u/0.28u son 7.86e-8 A.
-* Si cambias W o L, actualiza ese valor en las dos lineas
-* 'let ith_n' y 'let ith_p' (usa notacion 1e-6, no 1u).
-* ========================================================
-
-* ========================================================
-* 1. NMOS: familias de curvas
-* ========================================================
-* Salida: ID vs VDS para varios VGS (0 a 3.3 V, paso 0.55 V)
-dc V2 0 3.3 0.01 V1 0 3.3 0.55
-plot -i(V2) title 'NMOS Output' xlabel 'VDS' ylabel 'ID'
-
-* Transferencia: ID vs VGS para varios VDS (0.55 a 3.3 V)
-dc V1 0 3.3 0.01 V2 0.55 3.3 0.55
-plot -i(V2) title 'NMOS Transfer' xlabel 'VGS' ylabel 'ID'
-
-* ========================================================
-* 2. NMOS: gm/Id y criterio de Vth (VDS fijo = 1.65 V)
-* ========================================================
-alter V2 = 1.65
-dc V1 0 3.3 0.01
-
-* Mismas definiciones que en Metricas_dc
-let idn = abs(-i(V2)) + 1e-15
-let gmn = deriv(idn)
-let gmidn = gmn/idn
-
-* Referencias para los graficos
-let ref15 = 15 + 0*idn
-let ith_n = 1e-6 + 0*idn
-
-* gm/Id vs ID, con la linea de referencia gm/Id = 15
-plot gmidn ref15 vs idn xlog xlimit 1e-9 1e-3 ylimit 0 35 title 'NMOS gm/Id' xlabel 'ID (A)' ylabel 'gm/ID (1/V)'
-
-* ID vs VGS en escala log, con el nivel de corriente del criterio de Vth
-plot idn ith_n ylog ylimit 1e-12 1e-3 title 'NMOS ID vs VGS (criterio Vth)' xlabel 'VGS' ylabel 'ID (A)'
-
-* ========================================================
-* 3. NMOS: ID y gds contra VDS en el VGS donde gm/Id = 15
-* (sirve para comprobar que VDS = 1.65 V esta en saturacion)
-* ========================================================
-meas dc vgs_mod_n find v(vgn) when gmidn=15 cross=last
-set vgs_mod_n_val = $&vgs_mod_n
-
-alter V1 = $vgs_mod_n_val
-dc V2 0 3.3 0.01
-let idn_sat = abs(-i(V2))
-let gds_n_vec = deriv(idn_sat)
-plot idn_sat title 'NMOS ID vs VDS (gm/Id = 15)' xlabel 'VDS' ylabel 'ID (A)'
-plot gds_n_vec title 'NMOS gds vs VDS (gm/Id = 15)' xlabel 'VDS' ylabel 'gds (S)'
-
-* ========================================================
-* 4. PMOS: familias de curvas (V3 = VSD, V4 = VGS negativo)
-* ========================================================
-* Salida: |ID| vs VSD para varios VGS (0 a -3.3 V, paso -0.55 V)
-dc V3 0 3.3 0.01 V4 0 -3.3 -0.55
-plot -i(V3) title 'PMOS Output' xlabel 'VSD' ylabel '|ID|'
-
-* Transferencia: |ID| vs VGS para varios VSD (0.55 a 3.3 V)
-dc V4 0 -3.3 -0.01 V3 0.55 3.3 0.55
-plot -i(V3) title 'PMOS Transfer' xlabel 'VGS' ylabel '|ID|'
-
-* ========================================================
-* 5. PMOS: gm/Id y criterio de Vth (VSD fijo = 1.65 V)
-* ========================================================
-alter V3 = 1.65
-dc V4 0 -3.3 -0.01
-
-* Mismas definiciones que en Metricas_dc
-let idp = abs(i(V3)) + 1e-15
-let gmp = abs(deriv(idp))
-let gmidp = gmp/idp
-let vgsp = vgp-vsp
-
-* Referencias para los graficos
-let ref15p = 15 + 0*idp
-let ith_p = 1e-6 + 0*idp
-
-* gm/Id vs |ID|, con la linea de referencia gm/Id = 15
-plot gmidp ref15p vs idp xlog xlimit 1e-9 1e-3 ylimit 0 35 title 'PMOS gm/Id' xlabel '|ID| (A)' ylabel 'gm/ID (1/V)'
-
-* |ID| vs VGS en escala log (el eje X va de 0 a -3.3 V)
-plot idp ith_p ylog ylimit 1e-12 1e-3 title 'PMOS ID vs VGS (criterio Vth)' xlabel 'VGS' ylabel '|ID| (A)'
-
-* ========================================================
-* 6. PMOS: |ID| y gds contra VSD en el VGS donde gm/Id = 15
-* ========================================================
-meas dc vgs_mod_p find vgsp when gmidp=15 cross=last
-set vgs_mod_p_val = $&vgs_mod_p
-
-alter V4 = $vgs_mod_p_val
-dc V3 0 3.3 0.01
-let idp_sat = abs(i(V3))
-let gds_p_vec = deriv(idp_sat)
-plot idp_sat title 'PMOS ID vs VSD (gm/Id = 15)' xlabel 'VSD' ylabel '|ID| (A)'
-plot gds_p_vec title 'PMOS gds vs VSD (gm/Id = 15)' xlabel 'VSD' ylabel 'gds (S)'
-.endc
-"}
-C {code.sym} -60 -1420 0 0 {name=Metricas_ac1
-spice_ignore=0
-only_toplevel=true
-value="
-.control
-save all
-
-* Coloracion de graficas
+* Guardar parámetros internos del NMOS (XM1) 
+save @m.xm1.m0[id] 
+save @m.xm1.m0[vth] 
+save @m.xm1.m0[vdsat] 
+save @m.xm1.m0[gm] 
+save @m.xm1.m0[gds] 
+*save @m.xm1.m0[gmbs] 
+*save @m.xm1.m0[cgg] 
+*save @m.xm1.m0[cgs] 
+*save @m.xm1.m0[cgd] 
+
+*Guardar parámetros internos del PMOS (XM2) 
+save @m.xm2.m0[id] 
+save @m.xm2.m0[vth] 
+save @m.xm2.m0[vdsat] 
+save @m.xm2.m0[gm] 
+*save @m.xm2.m0[gds] 
+*save @m.xm2.m0[gmbs] 
+*save @m.xm2.m0[cgg] 
+*save @m.xm2.m0[cgs] 
+*save @m.xm2.m0[cgd]
+
+* ======================= ESTILO DE GRAFICOS =======================
 set color0=white
 set color1=black
 set color2=blue
 set color3=red
+set color4=darkgreen
 set xbrushwidth=2
 
-* ========================================================
-* PARAMETROS (lo unico que hay que editar)
-* ========================================================
-* gm/Id objetivo = nivel de inversion de cada transistor.
-*   ~5-8   : inversion fuerte (rapido, poco gm por uA)
-*   ~15    : inversion moderada
-*   ~20-25 : inversion debil (maximo gm por uA, lento)
-* Rango valido: ~3 a ~25 (el maximo fisico ronda 25-28).
-set gmid_n_obj = 15
-set gmid_p_obj = 15
-* Este script no depende de W/L: el punto de trabajo se busca
-* solo, igual que en Metricas_dc.
+* ==================================================================
+* 2. NMOS: BARRIDO gm/ID vs VGS (a VDS fijo)
+* ==================================================================
+alter v2 $vds_fijo_n
+dc V1 0.1 3.3 0.005
 
-* ========================================================
-* 1. NMOS: punto de polarizacion a gm/Id = gmid_n_obj
-*    (VDS fijo = 1.65 V, barrido de VGS)
-* ========================================================
-alter V2 = 1.65
-dc V1 0 3.3 0.01
+let id_n    = abs(@m.xm1.m0[id]) + 1e-18
+let gm_n    = abs(@m.xm1.m0[gm])
+let gds_n    = abs(@m.xm1.m0[gds])
+let gmid_n  = gm_n / id_n
+let vdsat_n = abs(@m.xm1.m0[vdsat])
+let vth_n   = abs(@m.xm1.m0[vth])
+let ref_n   = $gmid_obj_n + 0*gmid_n
 
-let idn = abs(-i(V2)) + 1e-15
-let gmn = deriv(idn)
-let gmidn = gmn/idn
+* Extraccion del punto especifico donde gm/ID = gmid_obj_n
+meas dc vgs_pt_n   find v(vgn)  when gmid_n=$gmid_obj_n cross=last
+meas dc id_pt_n    find id_n    when gmid_n=$gmid_obj_n cross=last
+meas dc vdsat_pt_n find vdsat_n when gmid_n=$gmid_obj_n cross=last
+meas dc vth_pt_n   find vth_n   when gmid_n=$gmid_obj_n cross=last
 
-* cross=last toma el cruce en que gm/Id BAJA por el objetivo
-meas dc id_n find idn when gmidn=$gmid_n_obj cross=last
-meas dc vgs_n find v(vgn) when gmidn=$gmid_n_obj cross=last
-set id_n_val = $&id_n
-set vgs_n_val = $&vgs_n
+set vgs_pn   = "$&vgs_pt_n"
+set id_pn    = "$&id_pt_n"
+set vdsat_pn = "$&vdsat_pt_n"
+set vth_pn   = "$&vth_pt_n"
 
-* ========================================================
-* 2. NMOS: analisis AC en ese punto (fT, gm y Cgg)
-* ========================================================
-alter V1 = $vgs_n_val
-alter V1 acmag = 1
-ac dec 20 1k 100G
+plot gmid_n ref_n title 'NMOS: gm/ID vs VGS' xlabel 'VGS (V)' ylabel 'gm/ID (1/V)'
 
-* Ganancia de corriente en cortocircuito H21 = i(drenaje) / i(compuerta)
-let h21_n = abs(i(V2) / i(V1))
-* Cgg = Im(i compuerta) / w, con 1 V de AC en la compuerta
-let cgg_n = abs(imag(i(V1))) / (2*pi*frequency)
-* gm = |i(drenaje)| con 1 V de AC en la compuerta
-let gm_ac_n = abs(i(V2))
+plot gds_n title 'NMOS: gds vs VGS' xlabel 'VGS (V)' ylabel 'gds (dId/dVds)'
 
-* fT = frecuencia en que H21 cae a 1 (0 dB)
-meas ac fT_n when h21_n=1
+* ==================================================================
+* 3. PMOS: BARRIDO gm/ID vs VSG (a VSD fijo)
+* ==================================================================
+alter v3 $vsd_fijo_p
+dc V4 -0.1 -3.3 -0.005
 
-* Cgg a 100 kHz (bien por debajo de fT) y gm a 1 kHz
-meas ac cgg_n_m find cgg_n at=1e5
-meas ac gm_n_m find gm_ac_n at=1e3
+let vsg_p   = abs(v(vgp) - v(vsp))
+let id_p    = abs(@m.xm2.m0[id]) + 1e-18
+let gm_p    = abs(@m.xm2.m0[gm])
+let gmid_p  = gm_p / id_p
+let vdsat_p = abs(@m.xm2.m0[vdsat])
+let vth_p   = abs(@m.xm2.m0[vth])
+let ref_p   = $gmid_obj_p + 0*gmid_p
 
-set cgg_n_val = $&cgg_n_m
-set gm_n_val = $&gm_n_m
-set fT_n_val = $&fT_n
+* Extraccion del punto especifico donde gm/ID = gmid_obj_p
+meas dc vsg_pt_p   find vsg_p   when gmid_p=$gmid_obj_p cross=last
+meas dc id_pt_p    find id_p    when gmid_p=$gmid_obj_p cross=last
+meas dc vdsat_pt_p find vdsat_p when gmid_p=$gmid_obj_p cross=last
+meas dc vth_pt_p   find vth_p   when gmid_p=$gmid_obj_p cross=last
 
-* Evita AC cruzado en la seccion PMOS
-alter V1 acmag = 0
+set vsg_pp   = "$&vsg_pt_p"
+set id_pp    = "$&id_pt_p"
+set vdsat_pp = "$&vdsat_pt_p"
+set vth_pp   = "$&vth_pt_p"
 
-* ========================================================
-* 3. PMOS: punto de polarizacion a gm/Id = gmid_p_obj
-*    (VSD fijo = 1.65 V, barrido de VSG)
-* ========================================================
-alter V3 = 1.65
-dc V4 0 -3.3 -0.01
+plot gmid_p ref_p vs vsg_p title 'PMOS: gm/ID vs VSG' xlabel 'VSG (V)' ylabel 'gm/ID (1/V)'
 
-let idp = abs(i(V3)) + 1e-15
-let gmp = abs(deriv(idp))
-let gmidp = gmp/idp
-let vgsp = vgp-vsp
+* ==================================================================
+* 4. REPORTE NUMERICO EN CONSOLA
+* ==================================================================
+echo ==========================================================
+echo  NMOS (W=$wn_val, L=$ln_val, VDS=$vds_fijo_n V) -- gm/ID = $gmid_obj_n 1/V
+echo ==========================================================
+echo  VGS requerido = $vgs_pn V
+echo  VTH interno   = $vth_pn V
+echo  Vdsat minimo  = $vdsat_pn V
+echo  ID resultante = $id_pn A
+echo ==========================================================
+echo ""
+echo ==========================================================
+echo  PMOS (W=$wp_val, L=$lp_val, VSD=$vsd_fijo_p V) -- gm/ID = $gmid_obj_p 1/V
+echo ==========================================================
+echo  VSG requerido = $vsg_pp V
+echo  VTH interno   = $vth_pp V
+echo  Vdsat minimo  = $vdsat_pp V
+echo  ID resultante = $id_pp A
+echo ==========================================================
+.endc
+"}
+C {code.sym} -170 -1440 0 0 {name=Curva_VDsat_Vgs
+only_toplevel=true
+spice_ignore=1
+value="
+.control
 
-meas dc id_p find idp when gmidp=$gmid_p_obj cross=last
-meas dc vgs_p find vgsp when gmidp=$gmid_p_obj cross=last
-set id_p_val = $&id_p
-set vgs_p_val = $&vgs_p
+* ==================================================================
+* 1. PARAMETROS EDITABLES
+* ==================================================================
+* --- NMOS: dimensiones (m), VDS fijo (V) y punto objetivo gm/ID ---
+set wn_val     = 10e-6
+set ln_val     = 1e-6
+set vds_fijo_n = 1.65
+set vdsat_obj_n = 200e-3
 
-* ========================================================
-* 4. PMOS: analisis AC en ese punto (fT, gm y Cgg)
-* ========================================================
-alter V4 = $vgs_p_val
-alter V4 acmag = 1
-ac dec 20 1k 100G
+* --- PMOS: dimensiones (m), VSD fijo (V) y punto objetivo gm/ID ---
+set wp_val     = 10e-6
+set lp_val     = 1e-6
+set vsd_fijo_p = 1.65
+set vdsat_obj_p = 200e-3
 
-let h21_p = abs(i(V3) / i(V4))
-let cgg_p = abs(imag(i(V4))) / (2*pi*frequency)
-let gm_ac_p = abs(i(V3))
+* Aplicar geometria al esquematico
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
 
-meas ac fT_p when h21_p=1
+* Guardar nodos y parametros internos BSIM4 necesarios para el barrido
+save all
 
-meas ac cgg_p_m find cgg_p at=1e5
-meas ac gm_p_m find gm_ac_p at=1e3
-set fT_p_val = $&fT_p
+* Guardar parámetros internos del NMOS (XM1) 
+save @m.xm1.m0[id] 
+save @m.xm1.m0[vth] 
+save @m.xm1.m0[vdsat] 
+save @m.xm1.m0[gm] 
+*save @m.xm1.m0[gds] 
+*save @m.xm1.m0[gmbs] 
+*save @m.xm1.m0[cgg] 
+*save @m.xm1.m0[cgs] 
+*save @m.xm1.m0[cgd] 
 
-set cgg_p_val = $&cgg_p_m
-set gm_p_val = $&gm_p_m
+*Guardar parámetros internos del PMOS (XM2) 
+save @m.xm2.m0[id] 
+save @m.xm2.m0[vth] 
+save @m.xm2.m0[vdsat] 
+save @m.xm2.m0[gm] 
+*save @m.xm2.m0[gds] 
+*save @m.xm2.m0[gmbs] 
+*save @m.xm2.m0[cgg] 
+*save @m.xm2.m0[cgs] 
+*save @m.xm2.m0[cgd]
 
-* Comprobaciones de consistencia
-let gmid_chk_n = $gm_n_val / $id_n_val
-let gmid_chk_p = $gm_p_val / $id_p_val
-let ft_chk_n = $gm_n_val / (2*pi*$cgg_n_val)
-let ft_chk_p = $gm_p_val / (2*pi*$cgg_p_val)
+* ======================= ESTILO DE GRAFICOS =======================
+set color0=white
+set color1=black
+set color2=blue
+set color3=red
+set color4=darkgreen
+set xbrushwidth=2
 
-* Graficar ganancia de corriente en dB vs frecuencia
-plot db(ac1.h21_n) db(ac2.h21_p) xlog title 'Ganancia de Corriente H21 (fT)' xlabel 'Frecuencia (Hz)' ylabel 'H21 (dB)'
+* ==================================================================
+* 2. NMOS: BARRIDO Vdsat vs VGS (a VDS fijo)
+* ==================================================================
+alter v2 $vds_fijo_n
+dc V1 0.1 3.3 0.005
 
-* --- IMPRIMIR RESULTADOS EN CONSOLA ---
-echo ================ RESULTADOS AC ================
-echo ---- NMOS (gm/Id objetivo = $gmid_n_obj) ----
-echo Id = $id_n_val A
-echo Vgs = $vgs_n_val V
-print ac1.fT_n 
-echo gm = $gm_n_val S
-echo Cgg = $cgg_n_val F
-echo Chequeo gm/Id (debe dar el objetivo) = $&gmid_chk_n
-echo Chequeo fT = gm/(2pi Cgg) = $&ft_chk_n Hz
-echo ---- PMOS (gm/Id objetivo = $gmid_p_obj) ----
-echo Id = $id_p_val A
-echo Vgs = $vgs_p_val V
-print ac2.fT_p
-echo gm = $gm_p_val S
-echo Cgg = $cgg_p_val F
-echo Chequeo gm/Id (debe dar el objetivo) = $&gmid_chk_p
-echo Chequeo fT = gm/(2pi Cgg) = $&ft_chk_p Hz
-echo ===============================================
+let id_n    = abs(@m.xm1.m0[id])
+let gm_n    = abs(@m.xm1.m0[gm])
+let vdsat_n = abs(@m.xm1.m0[vdsat])
+let vth_n   = abs(@m.xm1.m0[vth])
+let ref_n   = $vdsat_obj_n + 0*vdsat_n
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_n
+meas dc vgs_pt_n   find v(vgn)  when vdsat_n=$vdsat_obj_n 
+meas dc id_pt_n    find id_n    when vdsat_n=$vdsat_obj_n  
+meas dc gm_n_pt_n find gm_n when vdsat_n=$vdsat_obj_n 
+meas dc vth_pt_n   find vth_n   when vdsat_n=$vdsat_obj_n 
+
+set vgs_pn   = "$&vgs_pt_n"
+set id_pn    = "$&id_pt_n"
+set gm_pn = "$&gm_n_pt_n"
+set vth_pn   = "$&vth_pt_n"
+
+plot vdsat_n ref_n title 'NMOS: gm/ID vs VGS' xlabel 'VGS (V)' ylabel 'vdsat'
+
+* ==================================================================
+* 3. PMOS: BARRIDO gm/ID vs VSG (a VSD fijo)
+* ==================================================================
+alter v3 $vsd_fijo_p
+dc V4 -0.1 -3.3 -0.005
+
+let vsg_p   = abs(v(vgp) - v(vsp))
+let id_p    = abs(@m.xm2.m0[id])
+let gm_p    = abs(@m.xm2.m0[gm])
+let vdsat_p = abs(@m.xm2.m0[vdsat])
+let vth_p   = abs(@m.xm2.m0[vth])
+let ref_p   = $vdsat_obj_p + 0*vdsat_p
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_p
+meas dc vsg_pt_p   find vsg_p   when vdsat_p=$vdsat_obj_p
+meas dc id_pt_p    find id_p    when vdsat_p=$vdsat_obj_p
+meas dc gm_p_pt_p find gm_p when vdsat_p=$vdsat_obj_p
+meas dc vth_pt_p   find vth_p   when vdsat_p=$vdsat_obj_p 
+
+set vsg_pp   = "$&vsg_pt_p"
+set id_pp    = "$&id_pt_p"
+set gm_pp = "$&gm_p_pt_p"
+set vth_pp   = "$&vth_pt_p"
+
+plot vdsat_p ref_p vs vsg_p title 'PMOS: gm/ID vs VSG' xlabel 'VSG (V)' ylabel 'vdsat'
+
+* ==================================================================
+* 4. REPORTE NUMERICO EN CONSOLA
+* ==================================================================
+echo ==========================================================
+echo  NMOS (W=$wn_val, L=$ln_val, VDS=$vds_fijo_n V) -- vdsat = $vdsat_obj_n 1/V
+echo ==========================================================
+echo  VGS requerido = $vgs_pn V
+echo  VTH interno   = $vth_pn V
+echo  gm = $gm_pn S
+echo  ID resultante = $id_pn A
+echo ==========================================================
+echo ""
+echo ==========================================================
+echo  PMOS (W=$wp_val, L=$lp_val, VSD=$vsd_fijo_p V) -- vdsat = $vdsat_obj_p 1/V
+echo ==========================================================
+echo  VSG requerido = $vsg_pp V
+echo  VTH interno   = $vth_pp V
+echo  gm  = $gm_pp S
+echo  ID resultante = $id_pp A
+echo ==========================================================
+.endc
+"}
+C {code.sym} 10 -1440 0 0 {name=Curva_gmID_Id
+only_toplevel=true
+spice_ignore=1
+value="
+.control
+
+* ==================================================================
+* 1. PARAMETROS EDITABLES
+* ==================================================================
+* --- NMOS: dimensiones (m), VDS fijo (V) y punto objetivo gm/ID ---
+set wn_val     = 10e-6
+set ln_val     = 1e-6
+set vds_fijo_n = 1.65
+set gmid_obj_n = 5
+
+* --- PMOS: dimensiones (m), VSD fijo (V) y punto objetivo gm/ID ---
+set wp_val     = 10e-6
+set lp_val     = 1e-6
+set vsd_fijo_p = 1.65
+set gmid_obj_p = 5
+
+* Aplicar geometria al esquematico
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
+
+* Guardar nodos y parametros internos BSIM4 necesarios para el barrido
+save all
+
+* Guardar parámetros internos del NMOS (XM1) 
+save @m.xm1.m0[id] 
+save @m.xm1.m0[vth] 
+save @m.xm1.m0[vdsat] 
+save @m.xm1.m0[gm] 
+*save @m.xm1.m0[gds] 
+*save @m.xm1.m0[gmbs] 
+*save @m.xm1.m0[cgg] 
+*save @m.xm1.m0[cgs] 
+*save @m.xm1.m0[cgd] 
+
+*Guardar parámetros internos del PMOS (XM2) 
+save @m.xm2.m0[id] 
+save @m.xm2.m0[vth] 
+save @m.xm2.m0[vdsat] 
+save @m.xm2.m0[gm] 
+*save @m.xm2.m0[gds] 
+*save @m.xm2.m0[gmbs] 
+*save @m.xm2.m0[cgg] 
+*save @m.xm2.m0[cgs] 
+*save @m.xm2.m0[cgd]
+
+* ======================= ESTILO DE GRAFICOS =======================
+set color0=white
+set color1=black
+set color2=blue
+set color3=red
+set color4=darkgreen
+set xbrushwidth=2
+
+* ==================================================================
+* 2. NMOS: BARRIDO gm/ID vs VGS (a VDS fijo)
+* ==================================================================
+alter v2 $vds_fijo_n
+dc V1 0.1 3.3 0.005
+
+let id_n    = abs(@m.xm1.m0[id]) + 1e-18
+let gm_n    = abs(@m.xm1.m0[gm])
+let gmid_n  = gm_n / id_n
+let vdsat_n = abs(@m.xm1.m0[vdsat])
+let vth_n   = abs(@m.xm1.m0[vth])
+let ref_n   = $gmid_obj_n + 0*gmid_n
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_n
+meas dc vgs_pt_n   find v(vgn)  when gmid_n=$gmid_obj_n cross=last
+meas dc id_pt_n    find id_n    when gmid_n=$gmid_obj_n cross=last
+meas dc vdsat_pt_n find vdsat_n when gmid_n=$gmid_obj_n cross=last
+meas dc vth_pt_n   find vth_n   when gmid_n=$gmid_obj_n cross=last
+
+set vgs_pn   = "$&vgs_pt_n"
+set id_pn    = "$&id_pt_n"
+set vdsat_pn = "$&vdsat_pt_n"
+set vth_pn   = "$&vth_pt_n"
+
+plot gmid_n ref_n vs id_n title 'NMOS: gm/ID vs Id' xlabel 'Id' ylabel 'gm/ID (1/V)'
+
+* ==================================================================
+* 3. PMOS: BARRIDO gm/ID vs VSG (a VSD fijo)
+* ==================================================================
+alter v3 $vsd_fijo_p
+dc V4 -0.1 -3.3 -0.005
+
+let vsg_p   = abs(v(vgp) - v(vsp))
+let id_p    = abs(@m.xm2.m0[id]) + 1e-18
+let gm_p    = abs(@m.xm2.m0[gm])
+let gmid_p  = gm_p / id_p
+let vdsat_p = abs(@m.xm2.m0[vdsat])
+let vth_p   = abs(@m.xm2.m0[vth])
+let ref_p   = $gmid_obj_p + 0*gmid_p
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_p
+meas dc vsg_pt_p   find vsg_p   when gmid_p=$gmid_obj_p cross=last
+meas dc id_pt_p    find id_p    when gmid_p=$gmid_obj_p cross=last
+meas dc vdsat_pt_p find vdsat_p when gmid_p=$gmid_obj_p cross=last
+meas dc vth_pt_p   find vth_p   when gmid_p=$gmid_obj_p cross=last
+
+set vsg_pp   = "$&vsg_pt_p"
+set id_pp    = "$&id_pt_p"
+set vdsat_pp = "$&vdsat_pt_p"
+set vth_pp   = "$&vth_pt_p"
+
+plot gmid_p ref_p vs id_p title 'PMOS: gm/ID vs Id' xlabel 'Id' ylabel 'gm/ID (1/V)'
+
+* ==================================================================
+* 4. REPORTE NUMERICO EN CONSOLA
+* ==================================================================
+echo ==========================================================
+echo  NMOS (W=$wn_val, L=$ln_val, VDS=$vds_fijo_n V) -- gm/ID = $gmid_obj_n 1/V
+echo ==========================================================
+echo  VTH interno   = $vth_pn V
+echo  ID requerido = $id_pn A
+echo ==========================================================
+echo ""
+echo ==========================================================
+echo  PMOS (W=$wp_val, L=$lp_val, VSD=$vsd_fijo_p V) -- gm/ID = $gmid_obj_p 1/V
+echo ==========================================================
+echo  VTH interno   = $vth_pp V
+echo  ID requerido = $id_pp A
+echo ==========================================================
+.endc
+"}
+C {code.sym} -510 -1630 0 0 {name=Curva_gds_VDS
+only_toplevel=true
+spice_ignore=1
+value="
+.control
+* ======================= ESTILO DE GRAFICOS =======================
+set color0=white
+set color1=black
+set color2=blue
+set color3=red
+set color4=darkgreen
+set xbrushwidth=2
+
+* ==================================================================
+* 1. PARAMETROS EDITABLES (NMOS y PMOS)
+* ==================================================================
+set wn_val     = 10e-6
+set ln_val     = 1e-6
+set wp_val     = 10e-6
+set lp_val     = 1e-6
+set vgs_fijo_n = 1.65
+
+* Aplicar geometria al esquematico (ambos transistores)
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
+
+* --- Guardar parametros internos DESPUES del reset ---
+save all
+save @m.xm1.m0[id]
+save @m.xm1.m0[gds]
+save @m.xm1.m0[vdsat]
+save @m.xm1.m0[vth]
+
+* ==================================================================
+* 2. NMOS: BARRIDO gds vs VDS (a VGS fijo)
+* ==================================================================
+alter V1 $vgs_fijo_n
+dc V2 0 3.3 0.005
+
+let gds_n   = abs(@m.xm1.m0[gds])
+let id_n    = abs(@m.xm1.m0[id])
+let vdsat_n = abs(@m.xm1.m0[vdsat])
+let vth_n   = abs(@m.xm1.m0[vth])
+let rout_n  = 1 / (gds_n + 1e-18)
+
+* Diferencia entre VDS real (v(vdn)) y VDSAT para hallar el cruce
+let dv_sat  = v(vdn) - vdsat_n
+
+* Medir VDSAT y gds en el punto donde VDS cruza a VDSAT
+meas dc vdsat_medido find vdsat_n when dv_sat=0 cross=1
+meas dc gds_en_vdsat find gds_n when dv_sat=0 cross=1
+
+echo '=================================================='
+echo 'VDSAT en el cruce (V) : $&vdsat_medido'
+echo 'gds en VDSAT (S)      : $&gds_en_vdsat'
+echo '=================================================='
+
+* Graficar gds vs VDS
+plot gds_n vs v(vdn) title 'NMOS: gds vs VDS (VGS = 1.65V)' xlabel 'VDS (V)' ylabel 'gds (S)'
+
+.endc
+"}
+C {code.sym} -320 -1610 0 0 {name=Curva_gmro_VGS
+only_toplevel=true
+spice_ignore=0
+value="
+.control
+
+* ==================================================================
+* 1. PARAMETROS EDITABLES
+* ==================================================================
+* --- NMOS: dimensiones (m), VDS fijo (V) y punto objetivo gm/ID ---
+set wn_val     = 10e-6
+set ln_val     = 1e-6
+set vds_fijo_n = 1.65
+set gmro_obj_n = 300
+
+* --- PMOS: dimensiones (m), VSD fijo (V) y punto objetivo gm/ID ---
+set wp_val     = 10e-6
+set lp_val     = 1e-6
+set vsd_fijo_p = 1.65
+set gmro_obj_p = 300
+
+* Aplicar geometria al esquematico
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
+
+* Guardar nodos y parametros internos BSIM4 necesarios para el barrido
+save all
+
+* Guardar parámetros internos del NMOS (XM1) 
+save @m.xm1.m0[id] 
+save @m.xm1.m0[vth] 
+save @m.xm1.m0[vdsat] 
+save @m.xm1.m0[gm] 
+save @m.xm1.m0[gds] 
+*save @m.xm1.m0[gmbs] 
+*save @m.xm1.m0[cgg] 
+*save @m.xm1.m0[cgs] 
+*save @m.xm1.m0[cgd] 
+
+*Guardar parámetros internos del PMOS (XM2) 
+save @m.xm2.m0[id] 
+save @m.xm2.m0[vth] 
+save @m.xm2.m0[vdsat] 
+save @m.xm2.m0[gm] 
+*save @m.xm2.m0[gds] 
+*save @m.xm2.m0[gmbs] 
+*save @m.xm2.m0[cgg] 
+*save @m.xm2.m0[cgs] 
+*save @m.xm2.m0[cgd]
+
+* ======================= ESTILO DE GRAFICOS =======================
+set color0=white
+set color1=black
+set color2=blue
+set color3=red
+set color4=darkgreen
+set xbrushwidth=2
+
+* ==================================================================
+* 2. NMOS: BARRIDO gm/ID vs VGS (a VDS fijo)
+* ==================================================================
+alter v2 $vds_fijo_n
+dc V1 0.1 3.3 0.005
+
+let id_n = abs(@m.xm1.m0[id])
+let gm_n    = abs(@m.xm1.m0[gm])
+let gds_n    = abs(@m.xm1.m0[gds])
+let gmid_n  = gm_n / id_n
+let gmro_n = gm_n/gds_n
+let vdsat_n = abs(@m.xm1.m0[vdsat])
+let vth_n   = abs(@m.xm1.m0[vth])
+let ref_n   = $gmro_obj_n + 0*gmro_n
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_n
+meas dc vgs_pt_n find v(vgn) when gmro_n=$gmro_obj_n
+
+set vgs_pn   = "$&vgs_pt_n"
+
+plot gmro_n ref_n title 'NMOS: gmro vs VGS' xlabel 'VGS (V)' ylabel 'gmro (V/V)'
+
+* ==================================================================
+* 3. PMOS: BARRIDO gm/ID vs VSG (a VSD fijo)
+* ==================================================================
+alter v3 $vsd_fijo_p
+dc V4 -0.1 -3.3 -0.005
+
+let vsg_p   = abs(v(vgp) - v(vsp))
+let id_p    = abs(@m.xm2.m0[id]) + 1e-18
+let gm_p    = abs(@m.xm2.m0[gm])
+let gds_p   = abs(@m.xm2.m0[gds])
+let gmro_p = gm_p/gdp_n
+let gmid_p  = gm_p / id_p
+let vdsat_p = abs(@m.xm2.m0[vdsat])
+let vth_p   = abs(@m.xm2.m0[vth])
+let ref_p   = $gmro_obj_p + 0*gmro_p
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_p
+meas dc vsg_pt_p find vsg_p when gmro_p=$gmro_obj_p 
+
+set vsg_pp   = "$&vsg_pt_p"
+
+plot gmro_p ref_p vs vsg_p title 'PMOS: gmro vs VSG' xlabel 'VSG (V)' ylabel 'gmro (V/V)'
+
+* ==================================================================
+* 4. REPORTE NUMERICO EN CONSOLA
+* ==================================================================
+echo ==========================================================
+echo  NMOS (W=$wn_val, L=$ln_val, VDS=$vds_fijo_n V) -- gmro = $gmro_obj_n V/V
+echo ==========================================================
+echo  VGS requerido = $vgs_pn V
+echo ==========================================================
+echo ""
+echo ==========================================================
+echo  PMOS (W=$wp_val, L=$lp_val, VSD=$vsd_fijo_p V) -- gmro = $gmro_obj_p V/V
+echo ==========================================================
+echo  VSG requerido = $vsg_pp V
+echo ==========================================================
+.endc
+"}
+C {code.sym} -130 -1610 0 0 {name=Curva_ID_VGS
+only_toplevel=true
+spice_ignore=1
+value="
+.control
+
+* ==================================================================
+* 1. PARAMETROS EDITABLES
+* ==================================================================
+* --- NMOS: dimensiones (m), VDS fijo (V) y punto objetivo gm/ID ---
+set wn_val     = 5e-6
+set ln_val     = 1e-6
+set vds_fijo_n = 1.65
+set id_obj_n= 100e-6
+
+* --- PMOS: dimensiones (m), VSD fijo (V) y punto objetivo gm/ID ---
+set wp_val     = 1e-6
+set lp_val     = 1e-6
+set vsd_fijo_p = 1.65
+set id_obj_p = 50e-6
+
+* Aplicar geometria al esquematico
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
+
+* Guardar nodos y parametros internos BSIM4 necesarios para el barrido
+save all
+
+* Guardar parámetros internos del NMOS (XM1) 
+save @m.xm1.m0[id] 
+save @m.xm1.m0[vth] 
+save @m.xm1.m0[vdsat] 
+save @m.xm1.m0[gm] 
+save @m.xm1.m0[gds] 
+*save @m.xm1.m0[gmbs] 
+*save @m.xm1.m0[cgg] 
+*save @m.xm1.m0[cgs] 
+*save @m.xm1.m0[cgd] 
+
+*Guardar parámetros internos del PMOS (XM2) 
+save @m.xm2.m0[id] 
+save @m.xm2.m0[vth] 
+save @m.xm2.m0[vdsat] 
+save @m.xm2.m0[gm] 
+*save @m.xm2.m0[gds] 
+*save @m.xm2.m0[gmbs] 
+*save @m.xm2.m0[cgg] 
+*save @m.xm2.m0[cgs] 
+*save @m.xm2.m0[cgd]
+
+* ======================= ESTILO DE GRAFICOS =======================
+set color0=white
+set color1=black
+set color2=blue
+set color3=red
+set color4=darkgreen
+set xbrushwidth=2
+
+* ==================================================================
+* 2. NMOS: BARRIDO gm/ID vs VGS (a VDS fijo)
+* ==================================================================
+alter v2 $vds_fijo_n
+dc V1 0 3.3 0.005
+
+let id_n    = abs(@m.xm1.m0[id])
+let vth_n = abs(@m.xm1.m0[vth])
+let vdsat_n = abs(@m.xm1.m0[vdsat])
+let ref_n = $id_obj_n + 0*id_n
+
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_n
+meas dc vgs_pt_n   find v(vgn)  when id_n=$id_obj_n
+meas dc vdsat_pt_n   find vdsat_n  when id_n=$id_obj_n
+meas dc vth_pt_n   find vth_n   when id_p=$id_obj_n
+
+set vgs_pt_n_val = $&vgs_pt_n
+set vth_n_val = $&vth_pt_n 
+set vdsat_n_val = $&vdsat_pt_n
+
+plot id_n ref_n title 'NMOS: ID vs VGS' xlabel 'VGS (V)' ylabel 'ID'
+
+* ==================================================================
+* 3. PMOS: BARRIDO gm/ID vs VSG (a VSD fijo)
+* ==================================================================
+alter v3 $vsd_fijo_p
+dc V4 0 -3.3 -0.005
+
+let vsg_p   = abs(v(vgp) - v(vsp))
+let id_p    = abs(@m.xm2.m0[id])
+let gm_p    = abs(@m.xm2.m0[gm])
+let gmid_p  = gm_p / id_p
+let vdsat_p = abs(@m.xm2.m0[vdsat])
+let vth_p   = abs(@m.xm2.m0[vth])
+let ref_p   = $id_obj_p + 0*id_p
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_p
+meas dc vsg_pt_p   find vsg_p   when id_p=$id_obj_p
+meas dc vdsat_pt_p find vdsat_p when id_p=$id_obj_p 
+meas dc vth_pt_p   find vth_p   when id_p=$id_obj_p 
+
+set vsg_pt_p_val   = "$&vsg_pt_p"
+set vdsat_p_val = "$&vdsat_pt_p"
+set vth_p_val   = "$&vth_pt_p"
+
+plot id_p ref_p vs vsg_p title 'PMOS: ID vs VSG' xlabel 'VSG (V)' ylabel 'ID'
+
+
+* ==================================================================
+* 4. REPORTE NUMERICO EN CONSOLA
+* ==================================================================
+echo ==========================================================
+echo  NMOS (W=$wn_val, L=$ln_val, VDS=$vds_fijo_n V) --ID = $id_obj_n A
+echo ==========================================================
+echo  vgs = $vgs_pt_n_val V
+echo  vth = $vth_n_val V
+echo  vdsat = $vdsat_n_val V
+
+echo ==========================================================
+echo  PMOS (W=$wp_val, L=$lp_val, VSD=$vsd_fijo_p V) --ID = $id_obj_p A
+echo ==========================================================
+echo  vsg = $vsg_pt_p_val V
+echo  vth = $vth_p_val V
+echo  vdsat = $vdsat_p_val V
 .endc
 "}

@@ -37,13 +37,26 @@ N -50 -40 10 -40 {
 lab=#net4}
 N -50 20 -50 30 {
 lab=GND}
-N 100 -90 210 -90 {}
-N 210 -100 210 -90 {}
-N 100 -30 100 10 {}
-N 80 10 100 10 {}
-C {ota_n_in.sym} 50 80 0 0 {name=x1}
+N 100 -30 100 10 {
+lab=GND}
+N 80 10 100 10 {
+lab=GND}
+N 20 -180 20 -110 {
+lab=#net5}
+N 20 -110 60 -110 {
+lab=#net5}
+N 20 -290 20 -240 {
+lab=#net2}
+N 20 -290 270 -290 {
+lab=#net2}
+N 270 -290 270 -200 {
+lab=#net2}
+N 100 -100 210 -100 {
+lab=#net2}
+N 100 -100 100 -90 {
+lab=#net2}
 C {res.sym} -50 -80 1 0 {name=R1
-value=100k
+value=1k
 footprint=1206
 device=resistor
 m=1}
@@ -52,7 +65,7 @@ value=100k
 footprint=1206
 device=resistor
 m=1}
-C {vsource.sym} -140 -40 0 0 {name=V1 value=3 savecurrent=false}
+C {vsource.sym} -140 -40 0 0 {name=V1 value=1.65 savecurrent=false}
 C {vsource.sym} 270 -170 0 0 {name=V2 value=3.3 savecurrent=false}
 C {gnd.sym} 80 40 0 0 {name=l1 lab=GND}
 C {gnd.sym} 270 -120 0 0 {name=l2 lab=GND}
@@ -72,14 +85,34 @@ set color2=blue
 set color3=red
 set xbrushwidth=2
 
-* 1. Convertir V1 a onda senoidal: Offset = 1.65V, Amplitud = 0.5V, Frecuencia = 1kHz
-alter V1 sin(1.65 0.5 1k)
+* 1. Senoidales en contrafase (180 deg) con offset 1.65V, amplitud 1mV, frecuencia 1kHz
+alter @v1[sin] [ 1.65 1m 1k 0 0 0 ]
+alter @v3[sin] [ 1.65 1m 1k 0 0 180 ]
 
 * 2. Simular 5 ms con paso de 1 us (5 ciclos de 1 kHz)
-tran 1u 2m
+tran 1u 5m
 
-* 3. Graficar la señal de salida Vout
-plot v(Vout) title 'Respuesta Transitoria Inversor OTA 5T' xlabel 'Tiempo (s)' ylabel 'Voltaje (V)'
+* 3. Medir pico a pico directamente con meas (2ms a 5ms)
+meas tran vout_pp pp v(vout) from=2m to=5m
+meas tran vnet1_pp pp v(net1) from=2m to=5m
+
+* 4. Calcular diferencia de entrada y su pico a pico en pasos separados
+let vdiff = v(net4) - v(net1)
+let vdiff_max = vecmax(vdiff)
+let vdiff_min = vecmin(vdiff)
+let vdiff_pp = vdiff_max - vdiff_min
+
+* 5. Calcular ganancias por separado
+let ganancia_v1 = vout_pp / vnet1_pp
+let ganancia_diff = vout_pp / vdiff_pp
+
+echo "========================================"
+print ganancia_v1
+print ganancia_diff
+echo "========================================"
+
+* 6. Graficar salida y entradas
+plot v(vout) v(net1) v(net4) title 'Respuesta Transitoria OTA 5T' xlabel 'Tiempo (s)' ylabel 'Voltaje (V)'
 .endc
 "}
 C {code.sym} -320 -280 0 0 {name=Modelos
@@ -97,3 +130,5 @@ device="ceramic capacitor"}
 C {gnd.sym} 210 30 0 0 {name=l5 lab=GND}
 C {lab_wire.sym} 190 -60 0 0 {name=p2 sig_type=std_logic lab=vout}
 C {vsource.sym} -50 -10 0 0 {name=V3 value=1.65 savecurrent=false}
+C {isource.sym} 20 -210 0 0 {name=I0 value=20u}
+C {ota_n_in.sym} 50 80 0 0 {name=x1}
