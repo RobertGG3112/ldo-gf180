@@ -112,7 +112,7 @@ value="
 .param wn=1u l_n=1u wp=1u lp=1u
 "}
 C {code.sym} -520 -1440 0 0 {name=Parametros_OG
-spice_ignore=1
+spice_ignore=0
 only_toplevel=true
 value="
 .control
@@ -121,16 +121,16 @@ value="
 * 1. PARAMETROS EDITABLES
 * ========================================================
 * --- NMOS: dimensiones (m) y punto de polarizacion (V) ---
-set wn_val = 4.1e-6
+set wn_val = 1e-6
 set ln_val = 1e-6
-set vgs_n = 1.1
-set vds_n = 1.65
+set vgs_n = 0.723807
+set vds_n = 1.3
 
 * --- PMOS: dimensiones (m) y punto de polarizacion (V, magnitudes) ---
 set wp_val = 1e-6
 set lp_val = 1e-6
-set vsg_p = 1.35
-set vsd_p = 1.65
+set vsg_p = 0.939722
+set vsd_p = 960e-3
 
 * Aplicar W y L al circuito
 alterparam wn=$wn_val
@@ -338,15 +338,15 @@ value="
 * 1. PARAMETROS EDITABLES
 * ==================================================================
 * --- NMOS: dimensiones (m), VDS fijo (V) y punto objetivo gm/ID ---
-set wn_val     = 69.45e-6
+set wn_val     = 10e-6
 set ln_val     = 1e-6
-set vds_fijo_n = 1.65
-set gmid_obj_n = 22
+set vds_fijo_n = 360e-3
+set gmid_obj_n = 10
 
 * --- PMOS: dimensiones (m), VSD fijo (V) y punto objetivo gm/ID ---
-set wp_val     = 10e-6
+set wp_val     = 0.24e-6
 set lp_val     = 1e-6
-set vsd_fijo_p = 1.65
+set vsd_fijo_p = 1.3
 set gmid_obj_p = 5
 
 * Aplicar geometria al esquematico
@@ -800,7 +800,7 @@ plot gds_n vs v(vdn) title 'NMOS: gds vs VDS (VGS = 1.65V)' xlabel 'VDS (V)' yla
 "}
 C {code.sym} -320 -1610 0 0 {name=Curva_gmro_VGS
 only_toplevel=true
-spice_ignore=0
+spice_ignore=1
 value="
 .control
 
@@ -930,16 +930,16 @@ value="
 * 1. PARAMETROS EDITABLES
 * ==================================================================
 * --- NMOS: dimensiones (m), VDS fijo (V) y punto objetivo gm/ID ---
-set wn_val     = 5e-6
+set wn_val     = 1e-6
 set ln_val     = 1e-6
-set vds_fijo_n = 1.65
-set id_obj_n= 100e-6
+set vds_fijo_n = 360e-3
+set id_obj_n= 0.5e-6
 
 * --- PMOS: dimensiones (m), VSD fijo (V) y punto objetivo gm/ID ---
 set wp_val     = 1e-6
 set lp_val     = 1e-6
-set vsd_fijo_p = 1.65
-set id_obj_p = 50e-6
+set vsd_fijo_p = 960e-3
+set id_obj_p = 0.5e-6
 
 * Aplicar geometria al esquematico
 alterparam wn=$wn_val
@@ -1046,5 +1046,128 @@ echo ==========================================================
 echo  vsg = $vsg_pt_p_val V
 echo  vth = $vth_p_val V
 echo  vdsat = $vdsat_p_val V
+.endc
+"}
+C {code.sym} -740 -1620 0 0 {name=Curva_gmID_JD
+only_toplevel=true
+spice_ignore=1
+value="
+.control
+* ======================= ESTILO DE GRAFICOS =======================
+set color0=white
+set color1=black
+set color2=blue
+set color3=red
+set color4=darkgreen
+set xbrushwidth=2
+
+* ==================================================================
+* 1. PARAMETROS EDITABLES
+* ==================================================================
+* --- NMOS: dimensiones, VDS fijo (V) y punto objetivo gm/ID ---
+set wn_val     = 10e-6
+set ln_val     = 1e-6
+set vds_fijo_n = 360e-3
+set gmid_obj_n = 10
+
+* --- PMOS: dimensiones, VSD fijo (V) y punto objetivo gm/ID ---
+set wp_val     = 10e-6
+set lp_val     = 1e-6
+set vsd_fijo_p = 1.3
+set gmid_obj_p = 5
+
+* Aplicar geometria al esquematico y reiniciar
+alterparam wn=$wn_val
+alterparam l_n=$ln_val
+alterparam wp=$wp_val
+alterparam lp=$lp_val
+reset
+
+* Guardar nodos y parametros internos despues del reset
+save all
+
+* Guardar parametros internos del NMOS (XM1)
+save @m.xm1.m0[id]
+save @m.xm1.m0[vth]
+save @m.xm1.m0[gm]
+
+* Guardar parametros internos del PMOS (XM2)
+save @m.xm2.m0[id]
+save @m.xm2.m0[vth]
+save @m.xm2.m0[gm]
+
+* ==================================================================
+* 2. NMOS: BARRIDO gm/ID vs Jd (a VDS fijo)
+* ==================================================================
+alter v2 $vds_fijo_n
+dc V1 0.1 3.3 0.005
+
+let id_n   = abs(@m.xm1.m0[id]) + 1e-18
+let gm_n   = abs(@m.xm1.m0[gm])
+let gmid_n = gm_n / id_n
+let jd_n   = id_n / $wn_val
+let vth_n  = abs(@m.xm1.m0[vth])
+let ref_n  = $gmid_obj_n + 0*gmid_n
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_n
+meas dc jd_pt_n  find jd_n   when gmid_n=$gmid_obj_n cross=last
+meas dc vgs_pt_n find v(vgn) when gmid_n=$gmid_obj_n cross=last
+meas dc vth_pt_n find vth_n  when gmid_n=$gmid_obj_n cross=last
+meas dc id_pt_n  find id_n   when gmid_n=$gmid_obj_n cross=last
+
+set jd_pn  = "$&jd_pt_n"
+set vgs_pn = "$&vgs_pt_n"
+set vth_pn = "$&vth_pt_n"
+set id_pn  = "$&id_pt_n"
+
+plot gmid_n ref_n vs jd_n title 'NMOS: gm/ID vs Jd' xlabel 'Jd (A/m)' ylabel 'gm/ID (1/V)'
+
+* ==================================================================
+* 3. PMOS: BARRIDO gm/ID vs Jd (a VSD fijo)
+* ==================================================================
+alter v3 $vsd_fijo_p
+dc V4 -0.1 -3.3 -0.005
+
+let vsg_p  = abs(v(vgp) - v(vsp))
+let id_p   = abs(@m.xm2.m0[id]) + 1e-18
+let gm_p   = abs(@m.xm2.m0[gm])
+let gmid_p = gm_p / id_p
+let jd_p   = id_p / $wp_val
+let vth_p  = abs(@m.xm2.m0[vth])
+let ref_p  = $gmid_obj_p + 0*gmid_p
+
+* Extraccion del punto especifico donde gm/ID = gmid_obj_p
+meas dc jd_pt_p  find jd_p  when gmid_p=$gmid_obj_p cross=last
+meas dc vsg_pt_p find vsg_p when gmid_p=$gmid_obj_p cross=last
+meas dc vth_pt_p find vth_p when gmid_p=$gmid_obj_p cross=last
+meas dc id_pt_p  find id_p  when gmid_p=$gmid_obj_p cross=last
+
+set jd_pp  = "$&jd_pt_p"
+set vsg_pp = "$&vsg_pt_p"
+set vth_pp = "$&vth_pt_p"
+set id_pp  = "$&id_pt_p"
+
+plot gmid_p ref_p vs jd_p title 'PMOS: gm/ID vs Jd' xlabel 'Jd (A/m)' ylabel 'gm/ID (1/V)'
+
+* ==================================================================
+* 4. REPORTE NUMERICO EN CONSOLA
+* ==================================================================
+echo ==========================================================
+echo  NMOS (W=$wn_val, L=$ln_val, VDS=$vds_fijo_n V) - gm/ID = $gmid_obj_n 1/V
+echo ==========================================================
+echo  Jd requerido  = $jd_pn A/m
+echo  VGS requerido = $vgs_pn V
+echo  VTH interno   = $vth_pn V
+echo  ID resultante = $id_pn A
+echo ==========================================================
+echo ""
+echo ==========================================================
+echo  PMOS (W=$wp_val, L=$lp_val, VSD=$vsd_fijo_p V) - gm/ID = $gmid_obj_p 1/V
+echo ==========================================================
+echo  Jd requerido  = $jd_pp A/m
+echo  VSG requerido = $vsg_pp V
+echo  VTH interno   = $vth_pp V
+echo  ID resultante = $id_pp A
+echo ==========================================================
 .endc
 "}
